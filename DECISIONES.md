@@ -58,6 +58,18 @@
 - **Caída un lunes 8 a.m.**: agenda impresa + reiniciar con `iniciar.bat` + restaurar respaldo si hace falta.
 - **Horarios distintos por clínica**: cada médico tiene horarios por clínica y día de la semana. Ecuador no tiene cambio de horario; se usa la zona `America/Guayaquil`.
 
+## Sobre la calidad de los datos
+
+| Pregunta | Decisión |
+|---|---|
+| Cédula con 9 dígitos, letras o `0000000000` | Rechazada. Se validan 10 dígitos, código de provincia (01–24 o 30), tercer dígito < 6 y **dígito verificador (módulo 10)**. Así se sabe que el número *es válido*; no se puede saber si *existe* sin consultar al Registro Civil (fuera de alcance). |
+| Extranjero con pasaporte / paciente sin documento | Tipo `PASAPORTE` (5–20 letras/números) o `NINGUNO`. El documento es único por tipo. |
+| Teléfono `12345`, correo `juan@@gmail` | Rechazados con un mensaje que explica el formato correcto y da un ejemplo. |
+| Nacido en 2090 o con 300 años | Rechazado: fecha futura o edad mayor a 120 años. |
+| "MARÍA lópez" vs "Maria Lopez" | Se guarda ordenado ("María López") y se compara una versión sin tildes ni mayúsculas (`nombre_busqueda`), así la búsqueda y el aviso de duplicado los reconocen como iguales. |
+| El sistema rechaza un dato | Muestra el error junto al campo, en rojo y en palabras simples, **sin borrar lo ya escrito**. |
+| Texto raro (emojis, comillas, código) | Se eliminan emojis y caracteres de control, se recortan espacios y largo máximo. Las consultas usan parámetros (sin inyección SQL) y las plantillas escapan el HTML (sin inyección de código). |
+
 ## Contradicciones detectadas
 
 - *"Cualquiera pueda cancelar fácilmente"* vs. *"no soporta que se pierdan citas"* → se cancela en 2 clics, pero exige motivo, nunca se borra, queda registrado quién lo hizo y se puede deshacer.
@@ -65,6 +77,22 @@
 ## Lo que la clienta no dijo (y se agregó)
 
 - Usuarios individuales y roles, historial de cambios, respaldos, representante para menores.
+
+## Documentación entregada
+
+- [README.md](README.md): qué es y cómo está organizado.
+- [INSTALACION.md](INSTALACION.md): instalación en un equipo nuevo y prueba en 5 minutos para el jurado.
+- [docs/MANUAL_USUARIO.md](docs/MANUAL_USUARIO.md): manual paso a paso con capturas, pensado para doña Rosa.
+- [docs/DIAGRAMA_ENTIDAD_RELACION.md](docs/DIAGRAMA_ENTIDAD_RELACION.md): modelo de datos y diccionario.
+
+## Pendientes según el cronograma del concurso
+
+- **Datos de prueba (martes):** cuando se reciba el archivo, se hará un importador que valide cada fila
+  con las mismas reglas de `validaciones.py` y genere un reporte de filas rechazadas y por qué,
+  en lugar de cargar datos malos en silencio.
+- **Cambio de planes (miércoles/jueves):** se trabajará en una rama propia para que se vea en el historial.
+- **Etiqueta `entrega-final`:** se crea el viernes por la noche sobre el último commit revisado.
+- **Prueba con una persona no técnica:** pendiente; anotar aquí qué pasó y qué se cambió.
 
 ## Fuera de alcance (por ahora)
 
