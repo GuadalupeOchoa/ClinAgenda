@@ -11,7 +11,10 @@ def limpiar_texto(valor, max_len=200):
     """Quita espacios extra y caracteres de control/emojis raros."""
     if valor is None:
         return ""
-    valor = "".join(c for c in str(valor) if unicodedata.category(c)[0] != "C"
+    # Tabuladores y saltos de línea pasan a ser espacios (para no pegar palabras);
+    # luego se quitan caracteres de control invisibles y emojis/símbolos.
+    valor = re.sub(r"\s", " ", str(valor))
+    valor = "".join(c for c in valor if unicodedata.category(c)[0] != "C"
                     and unicodedata.category(c) != "So")
     valor = re.sub(r"\s+", " ", valor).strip()
     return valor[:max_len]
@@ -100,7 +103,7 @@ def validar_fecha_nacimiento(valor, hoy):
         return None, "La fecha de nacimiento no es válida."
     if fecha > hoy:
         return None, "La fecha de nacimiento no puede ser en el futuro."
-    if (hoy.year - fecha.year) > EDAD_MAXIMA:
+    if edad(fecha, hoy) > EDAD_MAXIMA:
         return None, f"La edad no puede ser mayor a {EDAD_MAXIMA} años. Revise el año."
     return fecha, None
 
