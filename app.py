@@ -131,7 +131,8 @@ def agenda():
         fecha = hoy()
     clinica_id = request.args.get("clinica_id", type=int)
 
-    sql = """SELECT c.*, p.nombres || ' ' || p.apellidos AS paciente, p.telefono,
+    sql = """SELECT c.*, p.nombres || ' ' || p.apellidos AS paciente,
+                    COALESCE(p.telefono, p.telefono_responsable) AS telefono,
                     p.documento, m.nombres AS medico, cl.nombre AS clinica
              FROM citas c
              JOIN pacientes p ON p.id = c.paciente_id

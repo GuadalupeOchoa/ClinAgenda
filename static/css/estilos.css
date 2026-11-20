@@ -118,6 +118,12 @@ form.en-linea { display: inline; }
 .lista-horarios { padding-left: 1.2rem; }
 .lista-horarios li { margin: .3rem 0; }
 
+/* Pantallas medianas: el menú pasa a una segunda fila */
+@media (max-width: 900px) {
+  .barra { justify-content: space-between; }
+  .barra nav { order: 3; flex: 1 1 100%; }
+}
+
 /* Celular: la tabla se convierte en tarjetas */
 @media (max-width: 700px) {
   html { font-size: 17px; }
