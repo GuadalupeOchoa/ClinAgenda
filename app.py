@@ -24,6 +24,8 @@ from db import conexion, consultar, registrar_auditoria
 ZONA = ZoneInfo("America/Guayaquil")
 DURACION_CITA_MIN = 30
 DIAS_MAX_ADELANTO = 180
+MAX_INTENTOS = 5          # intentos fallidos de contraseña antes de bloquear
+MINUTOS_BLOQUEO = 15
 DIAS_SEMANA = ["Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado", "Domingo"]
 ESTADOS = {"AGENDADA": "Agendada", "CANCELADA": "Cancelada",
            "ATENDIDA": "Atendida", "NO_ASISTIO": "No asistió"}
@@ -69,7 +71,7 @@ def variables_globales():
 def cargar_usuario_y_csrf():
     if "csrf" not in session:
         session["csrf"] = secrets.token_hex(16)
-    if request.method == "POST" and request.form.get("csrf") != session["csrf"]:
+    if request.method == "POST" and not secrets.compare_digest(request.form.get("csrf", ""), session["csrf"]):
         flash("La página estaba abierta hace mucho tiempo. Intente de nuevo.", "error")
         return redirect(request.url)
     g.usuario = None
@@ -95,6 +97,23 @@ def login_requerido(*roles):
     return decorador
 
 
+@app.after_request
+def encabezados_seguridad(resp):
+    """Protege los datos de salud en el navegador."""
+    resp.headers.setdefault("X-Frame-Options", "DENY")            # no se puede incrustar en otra página
+    resp.headers.setdefault("X-Content-Type-Options", "nosniff")
+    resp.headers.setdefault("Referrer-Policy", "same-origin")
+    if not request.path.startswith("/static/"):
+        # Tras cerrar sesión, el botón "Atrás" no vuelve a mostrar datos de pacientes
+        resp.headers["Cache-Control"] = "no-store"
+    return resp
+
+
+def destino_seguro(url):
+    """Solo permite volver a páginas de este mismo sistema (evita redirigir a sitios externos)."""
+    return url if url.startswith("/") and not url.startswith("//") and "\\" not in url else url_for("agenda")
+
+
 @app.route("/login", methods=["GET", "POST"])
 def login():
     if g.usuario:
@@ -102,15 +121,36 @@ def login():
     if request.method == "POST":
         nombre = v.limpiar_texto(request.form.get("usuario"), 40).lower()
         clave = request.form.get("clave", "")
-        u = consultar("SELECT * FROM usuarios WHERE usuario=%s", (nombre,), uno=True)
+        u = consultar("""SELECT *, (bloqueado_hasta IS NOT NULL AND bloqueado_hasta > NOW()) AS bloqueado,
+                                CEIL(EXTRACT(EPOCH FROM (bloqueado_hasta - NOW())) / 60) AS minutos
+                         FROM usuarios WHERE usuario=%s""", (nombre,), uno=True)
+        if u and u["bloqueado"]:
+            flash(f"Este usuario está bloqueado por varios intentos fallidos. Espere {int(u['minutos'])} "
+                  "minutos o pida a la administradora que le asigne una contraseña nueva.", "error")
+            return render_template("login.html", usuario_escrito=nombre)
         if u and u["activo"] and check_password_hash(u["clave_hash"], clave):
             session.clear()
             session.permanent = True
             session["usuario_id"] = u["id"]
             with conexion() as con, con.cursor() as cur:
+                cur.execute("UPDATE usuarios SET intentos_fallidos=0, bloqueado_hasta=NULL WHERE id=%s", (u["id"],))
                 registrar_auditoria(cur, u["id"], "INICIO_SESION", "usuario", u["id"])
-            siguiente = request.args.get("siguiente", "")
-            return redirect(siguiente if siguiente.startswith("/") else url_for("agenda"))
+            return redirect(destino_seguro(request.args.get("siguiente", "")))
+        if u:
+            # Cuenta los intentos fallidos; al llegar al límite bloquea el usuario un tiempo
+            with conexion() as con, con.cursor() as cur:
+                cur.execute("""UPDATE usuarios SET
+                                 intentos_fallidos = CASE WHEN intentos_fallidos + 1 >= %s THEN 0 ELSE intentos_fallidos + 1 END,
+                                 bloqueado_hasta = CASE WHEN intentos_fallidos + 1 >= %s
+                                                   THEN NOW() + make_interval(mins => %s) ELSE bloqueado_hasta END
+                               WHERE id=%s RETURNING bloqueado_hasta""",
+                            (MAX_INTENTOS, MAX_INTENTOS, MINUTOS_BLOQUEO, u["id"]))
+                bloqueo = cur.fetchone()["bloqueado_hasta"]
+                registrar_auditoria(cur, None, "BLOQUEO" if bloqueo else "LOGIN_FALLIDO", "usuario", u["id"])
+            if bloqueo:
+                flash(f"Demasiados intentos fallidos. El usuario quedó bloqueado {MINUTOS_BLOQUEO} minutos.", "error")
+                return render_template("login.html", usuario_escrito=nombre)
+        # Mismo mensaje exista o no el usuario: no se revela qué usuarios existen
         flash("Usuario o contraseña incorrectos.", "error")
         return render_template("login.html", usuario_escrito=nombre)
     return render_template("login.html")
@@ -304,8 +344,11 @@ def paciente_ficha(paciente_id):
 # -------------------------------------------------------------------- citas
 def horarios_libres(medico_id, clinica_id, fecha):
     """Devuelve la lista de horas libres del médico en esa clínica y fecha."""
-    bloques = consultar("""SELECT hora_inicio, hora_fin FROM horarios_medico
-                           WHERE medico_id=%s AND clinica_id=%s AND dia_semana=%s""",
+    # Solo médicos y clínicas activos (también se revisa al guardar: no se confía en el navegador)
+    bloques = consultar("""SELECT h.hora_inicio, h.hora_fin FROM horarios_medico h
+                           JOIN medicos m ON m.id = h.medico_id AND m.activo
+                           JOIN clinicas cl ON cl.id = h.clinica_id AND cl.activa
+                           WHERE h.medico_id=%s AND h.clinica_id=%s AND h.dia_semana=%s""",
                         (medico_id, clinica_id, fecha.weekday()))
     # Ocupadas en CUALQUIER clínica (un médico no puede estar en dos lugares)
     ocupadas = {r["hora"] for r in consultar(
@@ -522,9 +565,14 @@ def admin_medicos():
                 except (KeyError, ValueError):
                     flash("Complete todos los datos del horario.", "error")
                     return redirect(url_for("admin_medicos"))
+                cur.execute("""SELECT (SELECT COUNT(*) FROM medicos WHERE id=%s)
+                                    + (SELECT COUNT(*) FROM clinicas WHERE id=%s) AS n""", (medico_id, clinica_id))
+                existen = cur.fetchone()["n"] == 2
                 cur.execute("""SELECT 1 FROM horarios_medico WHERE medico_id=%s AND dia_semana=%s
                                AND hora_inicio < %s AND hora_fin > %s""", (medico_id, dia, fin, inicio))
-                if fin <= inicio:
+                if not existen or not 0 <= dia <= 6:
+                    flash("El médico, la clínica o el día elegido no son válidos.", "error")
+                elif fin <= inicio:
                     flash("La hora de fin debe ser después de la hora de inicio.", "error")
                 elif cur.fetchone():
                     flash("Ese médico ya tiene un horario que se cruza ese día (en esta u otra clínica).", "error")
@@ -587,7 +635,8 @@ def admin_usuarios():
                 if uid == g.usuario["id"]:
                     flash("No puede desactivarse a sí mismo.", "error")
                 else:
-                    cur.execute("UPDATE usuarios SET activo=%s WHERE id=%s", (accion == "activar", uid))
+                    cur.execute("""UPDATE usuarios SET activo=%s, intentos_fallidos=0, bloqueado_hasta=NULL
+                                   WHERE id=%s""", (accion == "activar", uid))
                     registrar_auditoria(cur, g.usuario["id"], accion.upper(), "usuario", uid)
                     flash("Usuario actualizado.", "ok")
             elif accion == "clave":
@@ -596,7 +645,9 @@ def admin_usuarios():
                 if len(clave) < 8:
                     flash("La contraseña debe tener al menos 8 caracteres.", "error")
                 else:
-                    cur.execute("UPDATE usuarios SET clave_hash=%s WHERE id=%s", (generate_password_hash(clave), uid))
+                    # Una contraseña nueva también desbloquea al usuario
+                    cur.execute("""UPDATE usuarios SET clave_hash=%s, intentos_fallidos=0, bloqueado_hasta=NULL
+                                   WHERE id=%s""", (generate_password_hash(clave), uid))
                     registrar_auditoria(cur, g.usuario["id"], "CAMBIAR_CLAVE", "usuario", uid)
                     flash("Contraseña cambiada.", "ok")
         return redirect(url_for("admin_usuarios"))
