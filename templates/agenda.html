@@ -9,7 +9,7 @@
 <div class="encabezado">
   <div>
     <h1>{% if fecha == hoy %}Agenda de hoy{% else %}Agenda{% endif %}</h1>
-    <p>{{ fecha|fecha }}{% if usuario.rol == 'MEDICO' %} · Solo sus citas{% endif %}</p>
+    <p>{{ fecha|fecha }}{% if usuario.rol == 'MEDICO' %} · Solo sus citas{% elif medico_sel %} · Solo citas de <b>{{ medico_sel.nombres }}</b>{% endif %}</p>
   </div>
   <div class="acciones no-imprimir">
     <button class="boton boton-secundario" onclick="window.print()">{{ icono('imprimir') }} Imprimir</button>
@@ -31,10 +31,10 @@
 </div>
 
 <form class="barra-fecha no-imprimir" method="get">
-  <a class="boton boton-secundario boton-icono" href="{{ url_for('agenda', fecha=dia_anterior, clinica_id=clinica_id) }}" aria-label="Día anterior" title="Día anterior">{{ icono('izquierda') }}</a>
+  <a class="boton boton-secundario boton-icono" href="{{ url_for('agenda', fecha=dia_anterior, clinica_id=clinica_id, medico_id=medico_id) }}" aria-label="Día anterior" title="Día anterior">{{ icono('izquierda') }}</a>
   <input type="date" name="fecha" value="{{ fecha }}" aria-label="Fecha" onchange="this.form.submit()">
-  <a class="boton boton-secundario boton-icono" href="{{ url_for('agenda', fecha=dia_siguiente, clinica_id=clinica_id) }}" aria-label="Día siguiente" title="Día siguiente">{{ icono('derecha') }}</a>
-  {% if fecha != hoy %}<a class="boton boton-suave" href="{{ url_for('agenda', clinica_id=clinica_id) }}">Volver a hoy</a>{% endif %}
+  <a class="boton boton-secundario boton-icono" href="{{ url_for('agenda', fecha=dia_siguiente, clinica_id=clinica_id, medico_id=medico_id) }}" aria-label="Día siguiente" title="Día siguiente">{{ icono('derecha') }}</a>
+  {% if fecha != hoy %}<a class="boton boton-suave" href="{{ url_for('agenda', clinica_id=clinica_id, medico_id=medico_id) }}">Volver a hoy</a>{% endif %}
   <span class="separador"></span>
   {% if usuario.rol != 'MEDICO' %}
   <select name="clinica_id" aria-label="Clínica" onchange="this.form.submit()">
@@ -43,6 +43,15 @@
       <option value="{{ cl.id }}" {% if cl.id == clinica_id %}selected{% endif %}>{{ cl.nombre }}</option>
     {% endfor %}
   </select>
+  <select name="medico_id" aria-label="Médico" onchange="this.form.submit()">
+    <option value="">{{ 'Todos los médicos de esta clínica' if clinica_id else 'Todos los médicos' }}</option>
+    {% for m in medicos %}
+      <option value="{{ m.id }}" {% if m.id == medico_id %}selected{% endif %}>{{ m.nombres }}</option>
+    {% endfor %}
+  </select>
+  {% if clinica_id or medico_id %}
+    <a class="boton boton-suave" href="{{ url_for('agenda', fecha=fecha) }}" title="Ver todas las clínicas y médicos">{{ icono('x') }} Quitar filtros</a>
+  {% endif %}
   {% endif %}
   <noscript><button class="boton" type="submit">Ver</button></noscript>
 </form>
@@ -50,8 +59,13 @@
 {% if not citas %}
   <div class="vacio">
     {{ icono('calendario') }}
+    {% if clinica_id or medico_id %}
+    <h3>No hay citas para este día con estos filtros</h3>
+    <p>Pruebe con otro médico u otra clínica, o quite los filtros.</p>
+    {% else %}
     <h3>No hay citas para este día</h3>
     <p>Cuando se agende una cita aparecerá aquí.</p>
+    {% endif %}
     {% if usuario.rol != 'MEDICO' %}<a class="boton" href="{{ url_for('pacientes') }}">{{ icono('calendario-mas') }} Agendar una cita</a>{% endif %}
   </div>
 {% else %}

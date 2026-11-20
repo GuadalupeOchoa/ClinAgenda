@@ -213,6 +213,25 @@ class SobreLasCitas(Base):
         c.post(f"/citas/{cid}/estado", data={"csrf": self.csrf(c), "estado": "ATENDIDA"})
         self.assertEqual(self.cita(p, fecha, "12:30")["estado"], "AGENDADA")
 
+    def test_filtro_de_agenda_por_medico(self):
+        c = self.cliente()
+        p1 = self.nuevo_paciente(c, nombres="Paciente", apellidos="De Salazar")
+        p2 = self.nuevo_paciente(c, nombres="Paciente", apellidos="De Andrade")
+        fecha = proximo_lunes() + timedelta(days=14)
+        self.agendar(c, p1, SALAZAR, CENTRO, fecha, "08:00")
+        self.agendar(c, p2, ANDRADE, CENTRO, fecha, "08:00")
+        html = c.get(f"/?fecha={fecha}&medico_id={SALAZAR}").data.decode()
+        self.assertIn("De Salazar", html)
+        self.assertNotIn("De Andrade", html)
+        html = c.get(f"/?fecha={fecha}&clinica_id={CENTRO}&medico_id={ANDRADE}").data.decode()
+        self.assertIn("De Andrade", html)
+        self.assertNotIn("De Salazar", html)
+        # Un médico que no atiende en la clínica elegida no filtra (se muestran todas las de esa clínica)
+        SUR = 3
+        html = c.get(f"/?fecha={fecha}&clinica_id={SUR}&medico_id={SALAZAR}").data.decode()
+        self.assertIn("con estos filtros", html)
+        self.assertNotIn("Solo citas de", html)
+
     def test_dia_sin_citas_muestra_mensaje(self):
         c = self.cliente()
         self.assertIn("No hay citas para este día", c.get("/?fecha=2030-01-01").data.decode())

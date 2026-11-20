@@ -172,6 +172,18 @@ def agenda():
     except ValueError:
         fecha = hoy()
     clinica_id = request.args.get("clinica_id", type=int)
+    medico_id = request.args.get("medico_id", type=int)
+
+    # Médicos para el filtro: si hay clínica elegida, solo los que atienden en ella
+    if clinica_id:
+        medicos = consultar("""SELECT DISTINCT m.id, m.nombres FROM medicos m
+                               JOIN horarios_medico h ON h.medico_id = m.id
+                               WHERE h.clinica_id = %s ORDER BY m.nombres""", (clinica_id,))
+    else:
+        medicos = consultar("SELECT id, nombres FROM medicos WHERE activo ORDER BY nombres")
+    if g.usuario["rol"] == "MEDICO" or medico_id not in {m["id"] for m in medicos}:
+        medico_id = None   # el médico ya ve solo lo suyo; o el elegido no atiende en esa clínica
+    medico_sel = next((m for m in medicos if m["id"] == medico_id), None)
 
     sql = """SELECT c.*, p.nombres || ' ' || p.apellidos AS paciente,
                     COALESCE(p.telefono, p.telefono_responsable) AS telefono,
@@ -188,11 +200,15 @@ def agenda():
     if clinica_id:
         sql += " AND c.clinica_id = %s"
         params.append(clinica_id)
+    if medico_id:
+        sql += " AND c.medico_id = %s"
+        params.append(medico_id)
     sql += " ORDER BY c.hora, cl.nombre, m.nombres"
 
     return render_template(
         "agenda.html", citas=consultar(sql, params), fecha=fecha,
         clinica_id=clinica_id, clinicas=consultar("SELECT * FROM clinicas WHERE activa ORDER BY id"),
+        medico_id=medico_id, medicos=medicos, medico_sel=medico_sel,
         dia_anterior=fecha - timedelta(days=1), dia_siguiente=fecha + timedelta(days=1))
 
 
