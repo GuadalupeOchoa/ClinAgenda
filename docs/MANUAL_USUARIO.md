@@ -72,6 +72,9 @@ Es la primera pantalla que verá. Muestra todas las citas de **hoy**.
 - **Cambiar de día:** use las flechas **‹** y **›**, o toque la fecha para elegir otra.
   Si se movió a otro día, el botón **Volver a hoy** la regresa.
 - **Elegir clínica:** en la lista "Todas las clínicas" puede elegir solo Centro, Norte o Sur.
+- **Elegir médico:** en la lista "Todos los médicos" puede ver solo las citas de un doctor.
+  Si antes eligió una clínica, la lista muestra solo los médicos que atienden en ella.
+  Para volver a ver todo, toque **Quitar filtros**.
 - **Cada cita** muestra: hora, paciente, teléfono, médico, motivo, clínica y estado.
 
 **Colores de cada clínica:** Centro = morado · Norte = azul · Sur = naranja.
