@@ -64,6 +64,12 @@ El instalador usa `winget` (viene en Windows 10/11). Instala Python 3.12, Postgr
 6. En **Agenda** → *Cancelar* (pide motivo) → *Deshacer cancelación*.
 7. **Historial de cambios** → se ve quién hizo cada acción.
 
+8. Opcional: ejecute las pruebas automáticas de todos los controles (tarda menos de un minuto):
+
+   ```powershell
+   .\venv\Scripts\python.exe -m unittest -v tests.test_controles
+   ```
+
 ## D. Usar desde otros equipos o celulares de la clínica
 
 El sistema escucha en la red local. Desde otro equipo de la misma red abra

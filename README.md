@@ -15,7 +15,26 @@ Repositorio: https://github.com/GuadalupeOchoa/ClinAgenda
 | [INSTALACION.md](INSTALACION.md) | Técnico / jurado: instalar en un equipo nuevo y probar en 5 minutos. |
 | [docs/MANUAL_USUARIO.md](docs/MANUAL_USUARIO.md) | Recepcionistas, médicos y administradora: uso paso a paso con capturas. |
 | [docs/DIAGRAMA_ENTIDAD_RELACION.md](docs/DIAGRAMA_ENTIDAD_RELACION.md) | Modelo de datos, diccionario y relaciones. |
-| [DECISIONES.md](DECISIONES.md) | Qué se decidió ante cada pregunta de la clienta, qué quedó fuera y por qué. |
+| [DECISIONES.md](DECISIONES.md) | Qué se decidió ante cada pregunta de la clienta, dónde está en el código y qué prueba lo demuestra. |
+| [docs/word/](docs/word/) | Los mismos entregables en **Word**: DECISIONES, Instrucciones de uso, Manual de usuario y Diagrama entidad-relación. |
+
+## Pruebas automáticas
+
+38 pruebas verifican cada control descrito en DECISIONES (citas cruzadas, fechas pasadas, roles,
+historial imborrable, validación de datos, bloqueo por contraseñas fallidas, etc.).
+Usan una base de datos aparte (`ClinAgenda_pruebas`) y no tocan los datos reales:
+
+```powershell
+.\venv\Scripts\python.exe -m unittest -v tests.test_controles
+```
+
+## Regenerar los documentos Word
+
+Si se modifica algún `.md`, los Word se regeneran así (requiere Node.js):
+
+```powershell
+cd herramientas; npm install; node generar_word.js
+```
 
 ## Qué hace
 
@@ -54,7 +73,9 @@ ClinAgenda/
 ├── sql/               # schema.sql (tablas e índices) y datos_iniciales.sql
 ├── templates/         # Pantallas HTML (Jinja2)
 ├── static/css/        # Estilos
-├── docs/              # Manual de usuario, diagrama entidad-relación y capturas
+├── docs/              # Manual de usuario, diagrama entidad-relación, capturas y docs/word/ (Word)
+├── tests/             # Pruebas automáticas de los controles (test_controles.py)
+├── herramientas/      # Generador de los documentos Word (Node.js)
 ├── instalar.ps1       # Instalador para un equipo Windows nuevo
 ├── iniciar.bat        # Abre el sistema con doble clic
 ├── respaldo.ps1       # Copia de seguridad de la base
