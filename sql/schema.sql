@@ -87,6 +87,24 @@ CREATE UNIQUE INDEX IF NOT EXISTS ux_citas_paciente_horario
     ON citas (paciente_id, fecha, hora) WHERE estado = 'AGENDADA';
 CREATE INDEX IF NOT EXISTS ix_citas_fecha ON citas (fecha, clinica_id);
 
+-- Bloqueo tras varios intentos fallidos de contraseña
+ALTER TABLE usuarios ADD COLUMN IF NOT EXISTS intentos_fallidos INT NOT NULL DEFAULT 0;
+ALTER TABLE usuarios ADD COLUMN IF NOT EXISTS bloqueado_hasta TIMESTAMP;
+
+-- "No soporta que se pierdan citas": la base de datos no permite borrar citas.
+-- Una cita se CANCELA (cambia de estado), nunca desaparece.
+CREATE OR REPLACE FUNCTION impedir_borrado_citas() RETURNS trigger AS $$
+BEGIN
+    RAISE EXCEPTION 'Las citas no se borran: cámbiela a estado CANCELADA';
+END;
+$$ LANGUAGE plpgsql;
+DROP TRIGGER IF EXISTS tr_citas_sin_borrado ON citas;
+CREATE TRIGGER tr_citas_sin_borrado BEFORE DELETE ON citas
+    FOR EACH ROW EXECUTE FUNCTION impedir_borrado_citas();
+DROP TRIGGER IF EXISTS tr_citas_sin_truncate ON citas;
+CREATE TRIGGER tr_citas_sin_truncate BEFORE TRUNCATE ON citas
+    FOR EACH STATEMENT EXECUTE FUNCTION impedir_borrado_citas();
+
 -- Bitácora: quién hizo qué y cuándo. Nunca se borra.
 CREATE TABLE IF NOT EXISTS auditoria (
     id          BIGSERIAL PRIMARY KEY,
@@ -98,3 +116,17 @@ CREATE TABLE IF NOT EXISTS auditoria (
     fecha       TIMESTAMP    NOT NULL DEFAULT NOW()
 );
 CREATE INDEX IF NOT EXISTS ix_auditoria_fecha ON auditoria (fecha DESC);
+
+-- La bitácora es de solo agregar: nadie puede modificarla ni borrarla (ni siquiera con SQL directo
+-- desde la aplicación). Así el historial de "quién hizo qué" es confiable.
+CREATE OR REPLACE FUNCTION auditoria_inmutable() RETURNS trigger AS $$
+BEGIN
+    RAISE EXCEPTION 'El historial de cambios no se puede modificar ni borrar';
+END;
+$$ LANGUAGE plpgsql;
+DROP TRIGGER IF EXISTS tr_auditoria_inmutable ON auditoria;
+CREATE TRIGGER tr_auditoria_inmutable BEFORE UPDATE OR DELETE ON auditoria
+    FOR EACH ROW EXECUTE FUNCTION auditoria_inmutable();
+DROP TRIGGER IF EXISTS tr_auditoria_sin_truncate ON auditoria;
+CREATE TRIGGER tr_auditoria_sin_truncate BEFORE TRUNCATE ON auditoria
+    FOR EACH STATEMENT EXECUTE FUNCTION auditoria_inmutable();
