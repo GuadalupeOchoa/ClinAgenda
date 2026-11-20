@@ -1,0 +1,76 @@
+{% extends "base.html" %}
+{% block titulo %}{{ 'Editar' if paciente_id else 'Nuevo' }} paciente{% endblock %}
+{% macro error(campo) %}{% if errores[campo] %}<p class="error-campo">⚠ {{ errores[campo] }}</p>{% endif %}{% endmacro %}
+{% block contenido %}
+<h1>{{ 'Editar paciente' if paciente_id else 'Registrar paciente nuevo' }}</h1>
+<p class="ayuda">Los campos con * son obligatorios.</p>
+
+<form method="post" class="tarjeta formulario" novalidate>
+  <input type="hidden" name="csrf" value="{{ csrf_token }}">
+
+  {% if parecidos %}
+  <div class="mensaje mensaje-aviso">
+    <b>¡Atención! Ya existe un paciente con el mismo nombre y fecha de nacimiento:</b>
+    <ul>
+      {% for x in parecidos %}
+        <li><a href="{{ url_for('paciente_ficha', paciente_id=x.id) }}" target="_blank">{{ x.nombres }} {{ x.apellidos }}</a>
+          — {{ x.documento or 'sin documento' }} — tel. {{ x.telefono or '—' }}</li>
+      {% endfor %}
+    </ul>
+    <p>Si es la misma persona, <b>no la registre otra vez</b>: búsquela en Pacientes.</p>
+    <label class="check"><input type="checkbox" name="confirmar_distinto" value="1"> Confirmo que es <b>otra persona</b> y quiero registrarla</label>
+  </div>
+  {% endif %}
+
+  <fieldset>
+    <legend>Documento</legend>
+    <label for="tipo_documento">Tipo de documento *</label>
+    <select id="tipo_documento" name="tipo_documento">
+      {% for val, txt in [('CEDULA','Cédula ecuatoriana'), ('PASAPORTE','Pasaporte (extranjeros)'), ('NINGUNO','No tiene documento (ej. recién nacido)')] %}
+        <option value="{{ val }}" {% if datos.tipo_documento == val %}selected{% endif %}>{{ txt }}</option>
+      {% endfor %}
+    </select>
+    <label for="documento">Número de documento</label>
+    <input id="documento" name="documento" value="{{ datos.documento }}" inputmode="text" maxlength="20" class="{{ 'con-error' if errores.documento }}">
+    {{ error('documento') }}
+  </fieldset>
+
+  <fieldset>
+    <legend>Datos personales</legend>
+    <label for="nombres">Nombres *</label>
+    <input id="nombres" name="nombres" value="{{ datos.nombres }}" maxlength="100" class="{{ 'con-error' if errores.nombres }}">
+    {{ error('nombres') }}
+    <label for="apellidos">Apellidos *</label>
+    <input id="apellidos" name="apellidos" value="{{ datos.apellidos }}" maxlength="100" class="{{ 'con-error' if errores.apellidos }}">
+    {{ error('apellidos') }}
+    <label for="fecha_nacimiento">Fecha de nacimiento *</label>
+    <input id="fecha_nacimiento" name="fecha_nacimiento" type="date" value="{{ datos.fecha_nacimiento }}" max="{{ hoy }}" class="{{ 'con-error' if errores.fecha_nacimiento }}">
+    {{ error('fecha_nacimiento') }}
+  </fieldset>
+
+  <fieldset>
+    <legend>Contacto</legend>
+    <label for="telefono">Teléfono del paciente</label>
+    <input id="telefono" name="telefono" value="{{ datos.telefono }}" inputmode="tel" placeholder="0991234567" maxlength="15" class="{{ 'con-error' if errores.telefono }}">
+    {{ error('telefono') }}
+    <label for="email">Correo electrónico (opcional)</label>
+    <input id="email" name="email" value="{{ datos.email }}" inputmode="email" maxlength="120" class="{{ 'con-error' if errores.email }}">
+    {{ error('email') }}
+  </fieldset>
+
+  <fieldset>
+    <legend>Familiar o representante (obligatorio si es menor de edad)</legend>
+    <label for="responsable">Nombre del representante</label>
+    <input id="responsable" name="responsable" value="{{ datos.responsable }}" maxlength="150" class="{{ 'con-error' if errores.responsable }}">
+    {{ error('responsable') }}
+    <label for="telefono_responsable">Teléfono del representante</label>
+    <input id="telefono_responsable" name="telefono_responsable" value="{{ datos.telefono_responsable }}" inputmode="tel" maxlength="15" class="{{ 'con-error' if errores.telefono_responsable }}">
+    {{ error('telefono_responsable') }}
+  </fieldset>
+
+  <div class="acciones">
+    <button class="boton boton-grande" type="submit">💾 Guardar paciente</button>
+    <a class="boton boton-secundario" href="{{ url_for('paciente_ficha', paciente_id=paciente_id) if paciente_id else url_for('pacientes') }}">Volver sin guardar</a>
+  </div>
+</form>
+{% endblock %}

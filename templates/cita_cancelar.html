@@ -1,0 +1,21 @@
+{% extends "base.html" %}
+{% block titulo %}Cancelar cita{% endblock %}
+{% block contenido %}
+<section class="tarjeta formulario">
+  <h1>¿Cancelar esta cita?</h1>
+  <p class="grande"><b>{{ c.paciente }}</b><br>
+     {{ c.fecha|fecha }} a las {{ c.hora|hora }}<br>
+     {{ c.medico }} — {{ c.clinica }}</p>
+  <form method="post">
+    <input type="hidden" name="csrf" value="{{ csrf_token }}">
+    <label for="motivo_cancelacion">¿Por qué se cancela? *</label>
+    <input id="motivo_cancelacion" name="motivo_cancelacion" maxlength="300" required
+           placeholder="Ej: el paciente llamó y no puede asistir" autofocus>
+    <p class="ayuda">La cita no se borra: queda guardada como «Cancelada» y se puede deshacer.</p>
+    <div class="acciones">
+      <button class="boton boton-grande boton-peligro" type="submit">Sí, cancelar la cita</button>
+      <a class="boton boton-grande boton-secundario" href="{{ url_for('agenda', fecha=c.fecha) }}">No, volver</a>
+    </div>
+  </form>
+</section>
+{% endblock %}

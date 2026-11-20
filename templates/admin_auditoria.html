@@ -1,0 +1,22 @@
+{% extends "base.html" %}
+{% block titulo %}Historial de cambios{% endblock %}
+{% block contenido %}
+<h1>Historial de cambios</h1>
+<p class="ayuda">Quién hizo qué y cuándo (últimos 300 registros). Este historial no se puede borrar desde el sistema.</p>
+<div class="tabla-envoltura">
+<table class="tabla">
+  <thead><tr><th>Fecha y hora</th><th>Usuario</th><th>Acción</th><th>Sobre</th><th>Detalle</th></tr></thead>
+  <tbody>
+  {% for r in registros %}
+    <tr>
+      <td data-titulo="Fecha">{{ r.fecha.strftime('%d/%m/%Y %H:%M') }}</td>
+      <td data-titulo="Usuario">{{ r.usuario or '—' }}</td>
+      <td data-titulo="Acción">{{ r.accion }}</td>
+      <td data-titulo="Sobre">{{ r.entidad }} #{{ r.entidad_id or '' }}</td>
+      <td data-titulo="Detalle">{{ r.detalle or '' }}</td>
+    </tr>
+  {% endfor %}
+  </tbody>
+</table>
+</div>
+{% endblock %}

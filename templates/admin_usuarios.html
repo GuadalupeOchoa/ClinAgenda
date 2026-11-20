@@ -1,0 +1,61 @@
+{% extends "base.html" %}
+{% block titulo %}Usuarios{% endblock %}
+{% block contenido %}
+<h1>Usuarios del sistema</h1>
+<p class="ayuda">Cada persona debe tener su propio usuario. Así se sabe quién hizo cada cambio. No comparta contraseñas.</p>
+
+<form method="post" class="tarjeta formulario">
+  <h2>Nuevo usuario</h2>
+  <input type="hidden" name="csrf" value="{{ csrf_token }}">
+  <input type="hidden" name="accion" value="nuevo">
+  <label for="usuario_n">Usuario (para entrar)</label>
+  <input id="usuario_n" name="usuario" placeholder="rosa" required>
+  <label for="nombre">Nombre completo</label>
+  <input id="nombre" name="nombre" required>
+  <label for="rol">Rol</label>
+  <select id="rol" name="rol">
+    <option value="RECEPCION">Recepción (agenda, pacientes, cancelar)</option>
+    <option value="MEDICO">Médico (solo ve su propia agenda)</option>
+    <option value="ADMIN">Administrador (todo, incluido el historial de cambios)</option>
+  </select>
+  <label for="medico_id">Si es médico, ¿cuál?</label>
+  <select id="medico_id" name="medico_id">
+    <option value="">—</option>
+    {% for m in medicos %}<option value="{{ m.id }}">{{ m.nombres }}</option>{% endfor %}
+  </select>
+  <label for="clave">Contraseña inicial (mínimo 8 caracteres)</label>
+  <input id="clave" name="clave" type="password" minlength="8" required autocomplete="new-password">
+  <button class="boton" type="submit">Crear usuario</button>
+</form>
+
+<div class="tabla-envoltura">
+<table class="tabla">
+  <thead><tr><th>Usuario</th><th>Nombre</th><th>Rol</th><th>Estado</th><th>Acciones</th></tr></thead>
+  <tbody>
+  {% for u in usuarios %}
+    <tr>
+      <td data-titulo="Usuario">{{ u.usuario }}</td>
+      <td data-titulo="Nombre">{{ u.nombre }}{% if u.medico %}<br><small>{{ u.medico }}</small>{% endif %}</td>
+      <td data-titulo="Rol">{{ u.rol|title }}</td>
+      <td data-titulo="Estado">{{ 'Activo' if u.activo else 'Desactivado' }}</td>
+      <td class="acciones-fila">
+        <form method="post">
+          <input type="hidden" name="csrf" value="{{ csrf_token }}">
+          <input type="hidden" name="usuario_id" value="{{ u.id }}">
+          <button class="boton boton-chico boton-secundario" name="accion" value="{{ 'desactivar' if u.activo else 'activar' }}">
+            {{ 'Desactivar' if u.activo else 'Activar' }}</button>
+        </form>
+        <form method="post">
+          <input type="hidden" name="csrf" value="{{ csrf_token }}">
+          <input type="hidden" name="usuario_id" value="{{ u.id }}">
+          <input type="hidden" name="accion" value="clave">
+          <input name="clave" type="password" placeholder="Nueva contraseña" minlength="8" required autocomplete="new-password">
+          <button class="boton boton-chico">Cambiar</button>
+        </form>
+      </td>
+    </tr>
+  {% endfor %}
+  </tbody>
+</table>
+</div>
+{% endblock %}

@@ -1,0 +1,137 @@
+/* ClinAgenda - estilos
+   Pensado para personas sin experiencia con computadoras:
+   letra grande, alto contraste, botones grandes, funciona en celular. */
+
+:root {
+  --fondo: #f4f6f8;
+  --tarjeta: #ffffff;
+  --texto: #1a1a1a;
+  --suave: #555;
+  --primario: #0b5cad;
+  --primario-oscuro: #08447f;
+  --peligro: #b3261e;
+  --ok-fondo: #e3f4e6;  --ok-texto: #1b5e20;
+  --error-fondo: #fde8e7; --error-texto: #8c1d18;
+  --aviso-fondo: #fff4d6; --aviso-texto: #6b4d00;
+  --borde: #c9d1d9;
+  --radio: 10px;
+}
+
+* { box-sizing: border-box; }
+html { font-size: 18px; }
+body {
+  margin: 0;
+  font-family: "Segoe UI", Arial, sans-serif;
+  background: var(--fondo);
+  color: var(--texto);
+  line-height: 1.5;
+}
+a { color: var(--primario); }
+h1 { font-size: 1.6rem; margin: .4rem 0 1rem; }
+h2 { font-size: 1.25rem; margin-top: 0; }
+
+/* Barra superior */
+.barra {
+  display: flex; flex-wrap: wrap; align-items: center; gap: .5rem 1.5rem;
+  background: var(--primario); color: #fff; padding: .6rem 1rem;
+}
+.barra a { color: #fff; text-decoration: none; }
+.barra nav { display: flex; flex-wrap: wrap; gap: .3rem; flex: 1; }
+.barra nav a { padding: .4rem .8rem; border-radius: 6px; }
+.barra nav a:hover, .barra nav a:focus { background: var(--primario-oscuro); }
+.marca { font-weight: 700; font-size: 1.3rem; }
+.quien { font-size: .9rem; }
+.quien a { text-decoration: underline; }
+
+.contenido { max-width: 1150px; margin: 0 auto; padding: 1rem; }
+
+/* Mensajes */
+.mensaje { padding: .9rem 1.1rem; border-radius: var(--radio); margin-bottom: 1rem; font-weight: 600; }
+.mensaje-ok    { background: var(--ok-fondo);    color: var(--ok-texto); }
+.mensaje-error { background: var(--error-fondo); color: var(--error-texto); }
+.mensaje-aviso { background: var(--aviso-fondo); color: var(--aviso-texto); font-weight: normal; }
+.ayuda { color: var(--suave); }
+.vacio { padding: 1.5rem; background: var(--tarjeta); border-radius: var(--radio); text-align: center; color: var(--suave); }
+.grande { font-size: 1.2rem; }
+
+/* Tarjetas y formularios */
+.tarjeta { background: var(--tarjeta); border-radius: var(--radio); padding: 1.2rem; margin-bottom: 1rem;
+           box-shadow: 0 1px 3px rgba(0,0,0,.08); }
+.formulario { max-width: 640px; }
+.login { max-width: 420px; margin: 3rem auto; }
+fieldset { border: 1px solid var(--borde); border-radius: var(--radio); margin: 0 0 1rem; padding: .8rem 1rem; }
+legend { font-weight: 700; padding: 0 .3rem; }
+label { display: block; font-weight: 600; margin: .8rem 0 .25rem; }
+label.check { font-weight: normal; display: flex; gap: .5rem; align-items: center; }
+input, select {
+  width: 100%; font-size: 1rem; padding: .7rem .8rem;
+  border: 2px solid var(--borde); border-radius: 8px; background: #fff; color: var(--texto);
+}
+input[type=checkbox] { width: 1.4rem; height: 1.4rem; }
+input:focus, select:focus { outline: 3px solid #8ab4f8; border-color: var(--primario); }
+.con-error { border-color: var(--peligro); background: #fff8f8; }
+.error-campo { color: var(--peligro); margin: .3rem 0 0; font-weight: 600; }
+
+/* Botones */
+.boton {
+  display: inline-block; font-size: 1rem; font-weight: 600; text-decoration: none; text-align: center;
+  background: var(--primario); color: #fff; border: 2px solid var(--primario);
+  padding: .65rem 1.1rem; border-radius: 8px; cursor: pointer; margin: .2rem 0;
+}
+.boton:hover, .boton:focus { background: var(--primario-oscuro); }
+.boton-grande { font-size: 1.15rem; padding: .85rem 1.4rem; }
+.boton-chico { font-size: .9rem; padding: .4rem .7rem; }
+.boton-secundario { background: #fff; color: var(--primario); }
+.boton-secundario:hover { background: #e8f0fb; }
+.boton-peligro { background: var(--peligro); border-color: var(--peligro); color: #fff; }
+.boton-peligro:hover { background: #8c1d18; }
+.acciones { display: flex; flex-wrap: wrap; gap: .5rem; align-items: center; margin-top: 1rem; }
+.encabezado { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: .5rem; }
+.encabezado .acciones { margin-top: 0; }
+.acciones-fila form { display: inline; }
+form.en-linea { display: inline; }
+
+/* Filtros y buscador */
+.filtros, .buscador { display: flex; flex-wrap: wrap; gap: .5rem; align-items: center; margin-bottom: 1rem; }
+.filtros input, .filtros select { width: auto; }
+.buscador input { flex: 1; min-width: 220px; font-size: 1.15rem; }
+
+/* Horas disponibles */
+.horas { display: grid; grid-template-columns: repeat(auto-fill, minmax(110px, 1fr)); gap: .6rem; }
+.hora { font-size: 1.25rem; padding: 1rem 0; }
+
+/* Tablas */
+.tabla-envoltura { overflow-x: auto; }
+.tabla { width: 100%; border-collapse: collapse; background: var(--tarjeta); border-radius: var(--radio); overflow: hidden; }
+.tabla th, .tabla td { padding: .7rem .8rem; text-align: left; border-bottom: 1px solid #e3e7eb; vertical-align: top; }
+.tabla th { background: #e8eef5; }
+.estado-cancelada td { color: #777; text-decoration: line-through; }
+.estado-cancelada td.acciones-fila, .estado-cancelada td:last-child { text-decoration: none; }
+.etiqueta { padding: .15rem .6rem; border-radius: 99px; font-size: .85rem; font-weight: 700; text-decoration: none; display: inline-block; }
+.etiqueta-agendada  { background: #dbe9fb; color: #0b4a8b; }
+.etiqueta-cancelada { background: #eee;    color: #555; }
+.etiqueta-atendida  { background: var(--ok-fondo); color: var(--ok-texto); }
+.etiqueta-no_asistio{ background: var(--aviso-fondo); color: var(--aviso-texto); }
+
+.datos p { margin: .3rem 0; }
+.dos-columnas { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 1rem; }
+.lista-horarios { padding-left: 1.2rem; }
+.lista-horarios li { margin: .3rem 0; }
+
+/* Celular: la tabla se convierte en tarjetas */
+@media (max-width: 700px) {
+  html { font-size: 17px; }
+  .tabla thead { display: none; }
+  .tabla, .tabla tbody, .tabla tr, .tabla td { display: block; width: 100%; }
+  .tabla tr { margin-bottom: .8rem; border: 1px solid var(--borde); border-radius: var(--radio); }
+  .tabla td { border: none; padding: .35rem .8rem; }
+  .tabla td[data-titulo]::before { content: attr(data-titulo) ": "; font-weight: 700; }
+  .filtros input, .filtros select { width: 100%; }
+}
+
+/* Impresión: agenda en papel por si se cae el sistema o internet */
+@media print {
+  .no-imprimir, .barra, .mensaje { display: none !important; }
+  body { background: #fff; font-size: 12pt; }
+  .tabla th, .tabla td { border: 1px solid #999; }
+}

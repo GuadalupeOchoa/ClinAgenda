@@ -1,0 +1,60 @@
+{% extends "base.html" %}
+{% block titulo %}Agendar cita{% endblock %}
+{% block contenido %}
+<h1>Agendar cita para {{ p.nombres }} {{ p.apellidos }}</h1>
+
+<form method="get" class="tarjeta formulario">
+  <label for="clinica_id">1. ¿En qué clínica?</label>
+  <select id="clinica_id" name="clinica_id" onchange="this.form.medico_id.value=''; this.form.submit()">
+    <option value="">— Elija la clínica —</option>
+    {% for cl in clinicas %}
+      <option value="{{ cl.id }}" {% if cl.id == clinica_id %}selected{% endif %}>{{ cl.nombre }}</option>
+    {% endfor %}
+  </select>
+
+  {% if clinica_id %}
+  <label for="medico_id">2. ¿Con qué médico?</label>
+  <select id="medico_id" name="medico_id" onchange="this.form.submit()">
+    <option value="">— Elija el médico —</option>
+    {% for m in medicos %}
+      <option value="{{ m.id }}" {% if m.id == medico_id %}selected{% endif %}>{{ m.nombres }}{% if m.especialidad %} ({{ m.especialidad }}){% endif %}</option>
+    {% endfor %}
+  </select>
+  {% else %}
+  <input type="hidden" name="medico_id" value="">
+  {% endif %}
+
+  {% if clinica_id and medico_id %}
+  <label for="fecha">3. ¿Qué día?</label>
+  <input id="fecha" type="date" name="fecha" value="{{ fecha or '' }}" min="{{ hoy }}" onchange="this.form.submit()">
+  <label for="motivo">Motivo de la consulta (opcional)</label>
+  <input id="motivo" name="motivo" value="{{ motivo }}" maxlength="300">
+  {% endif %}
+
+  <noscript><button class="boton" type="submit">Continuar</button></noscript>
+  <button class="boton boton-secundario" type="submit">Ver horarios disponibles</button>
+</form>
+
+{% if libres is not none %}
+<section class="tarjeta">
+  <h2>4. Elija la hora — {{ fecha|fecha }}</h2>
+  {% if not libres %}
+    <p class="vacio">No hay horarios libres para este médico ese día en esta clínica. Pruebe otro día u otro médico.</p>
+  {% else %}
+  <form method="post" class="horas">
+    <input type="hidden" name="csrf" value="{{ csrf_token }}">
+    <input type="hidden" name="clinica_id" value="{{ clinica_id }}">
+    <input type="hidden" name="medico_id" value="{{ medico_id }}">
+    <input type="hidden" name="fecha" value="{{ fecha }}">
+    <input type="hidden" name="motivo" value="{{ motivo }}">
+    {% for h in libres %}
+      <button class="boton hora" name="hora" value="{{ h|hora }}"
+              onclick="return confirm('¿Confirmar la cita del {{ fecha|fecha }} a las {{ h|hora }}?')">{{ h|hora }}</button>
+    {% endfor %}
+  </form>
+  {% endif %}
+</section>
+{% endif %}
+
+<p><a class="boton boton-secundario" href="{{ url_for('paciente_ficha', paciente_id=p.id) }}">Volver</a></p>
+{% endblock %}

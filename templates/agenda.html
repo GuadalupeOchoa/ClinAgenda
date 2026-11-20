@@ -1,0 +1,78 @@
+{% extends "base.html" %}
+{% block titulo %}Agenda{% endblock %}
+{% block contenido %}
+<div class="encabezado">
+  <h1>Agenda del {{ fecha|fecha }}</h1>
+  <div class="no-imprimir acciones">
+    {% if usuario.rol != 'MEDICO' %}
+      <a class="boton boton-grande" href="{{ url_for('pacientes') }}">➕ Agendar cita</a>
+    {% endif %}
+    <button class="boton boton-secundario" onclick="window.print()">🖨️ Imprimir</button>
+  </div>
+</div>
+
+<form class="filtros no-imprimir" method="get">
+  <a class="boton boton-secundario" href="{{ url_for('agenda', fecha=dia_anterior, clinica_id=clinica_id) }}">◀ Día anterior</a>
+  <input type="date" name="fecha" value="{{ fecha }}" aria-label="Fecha">
+  {% if usuario.rol != 'MEDICO' %}
+  <select name="clinica_id" aria-label="Clínica">
+    <option value="">Todas las clínicas</option>
+    {% for cl in clinicas %}
+      <option value="{{ cl.id }}" {% if cl.id == clinica_id %}selected{% endif %}>{{ cl.nombre }}</option>
+    {% endfor %}
+  </select>
+  {% endif %}
+  <button class="boton" type="submit">Ver</button>
+  <a class="boton boton-secundario" href="{{ url_for('agenda', clinica_id=clinica_id) }}">Hoy</a>
+  <a class="boton boton-secundario" href="{{ url_for('agenda', fecha=dia_siguiente, clinica_id=clinica_id) }}">Día siguiente ▶</a>
+</form>
+
+{% if not citas %}
+  <p class="vacio">No hay citas para este día.</p>
+{% else %}
+<div class="tabla-envoltura">
+<table class="tabla">
+  <thead>
+    <tr><th>Hora</th><th>Paciente</th><th>Teléfono</th><th>Médico</th><th>Clínica</th><th>Motivo</th><th>Estado</th><th class="no-imprimir">Acciones</th></tr>
+  </thead>
+  <tbody>
+  {% for c in citas %}
+    <tr class="estado-{{ c.estado|lower }}">
+      <td class="grande" data-titulo="Hora">{{ c.hora|hora }}</td>
+      <td data-titulo="Paciente"><a href="{{ url_for('paciente_ficha', paciente_id=c.paciente_id) }}">{{ c.paciente }}</a></td>
+      <td data-titulo="Teléfono">{{ c.telefono or '—' }}</td>
+      <td data-titulo="Médico">{{ c.medico }}</td>
+      <td data-titulo="Clínica">{{ c.clinica }}</td>
+      <td data-titulo="Motivo">{{ c.motivo or '' }}{% if c.motivo_cancelacion %}<br><small>Cancelada: {{ c.motivo_cancelacion }}</small>{% endif %}</td>
+      <td data-titulo="Estado"><span class="etiqueta etiqueta-{{ c.estado|lower }}">{{ ESTADOS[c.estado] }}</span></td>
+      <td class="no-imprimir acciones-fila">
+        {% if c.estado == 'AGENDADA' %}
+          {% if c.fecha <= hoy %}
+          <form method="post" action="{{ url_for('cita_estado', cita_id=c.id) }}">
+            <input type="hidden" name="csrf" value="{{ csrf_token }}">
+            <button class="boton boton-chico" name="estado" value="ATENDIDA">✔ Atendida</button>
+            <button class="boton boton-chico boton-secundario" name="estado" value="NO_ASISTIO">No vino</button>
+          </form>
+          {% endif %}
+          {% if usuario.rol != 'MEDICO' %}
+            <a class="boton boton-chico boton-peligro" href="{{ url_for('cita_cancelar', cita_id=c.id) }}">Cancelar</a>
+          {% endif %}
+        {% elif c.estado == 'CANCELADA' and usuario.rol != 'MEDICO' %}
+          <form method="post" action="{{ url_for('cita_reactivar', cita_id=c.id) }}">
+            <input type="hidden" name="csrf" value="{{ csrf_token }}">
+            <button class="boton boton-chico boton-secundario">↩ Deshacer cancelación</button>
+          </form>
+        {% elif c.estado in ('ATENDIDA', 'NO_ASISTIO') %}
+          <form method="post" action="{{ url_for('cita_estado', cita_id=c.id) }}">
+            <input type="hidden" name="csrf" value="{{ csrf_token }}">
+            <button class="boton boton-chico boton-secundario" name="estado" value="AGENDADA">↩ Corregir</button>
+          </form>
+        {% endif %}
+      </td>
+    </tr>
+  {% endfor %}
+  </tbody>
+</table>
+</div>
+{% endif %}
+{% endblock %}

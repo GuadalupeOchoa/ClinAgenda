@@ -1,0 +1,42 @@
+{% extends "base.html" %}
+{% block titulo %}Pacientes{% endblock %}
+{% block contenido %}
+<h1>Buscar paciente</h1>
+<p class="ayuda">Paso 1: busque al paciente por su <b>nombre</b>, <b>cédula</b> o <b>teléfono</b>. Si no aparece, regístrelo.</p>
+
+<form class="buscador" method="get">
+  <input name="q" value="{{ q }}" placeholder="Ej: María López o 1712345678" aria-label="Buscar paciente" autofocus>
+  <button class="boton boton-grande" type="submit">🔍 Buscar</button>
+</form>
+
+{% if usuario.rol != 'MEDICO' %}
+<p><a class="boton boton-secundario" href="{{ url_for('paciente_form') }}">➕ Registrar paciente nuevo</a></p>
+{% endif %}
+
+{% if q %}
+  {% if not pacientes %}
+    <p class="vacio">No se encontró ningún paciente con «{{ q }}». Revise cómo lo escribió o regístrelo como nuevo.</p>
+  {% else %}
+  <div class="tabla-envoltura">
+  <table class="tabla">
+    <thead><tr><th>Paciente</th><th>Documento</th><th>Edad</th><th>Teléfono</th><th></th></tr></thead>
+    <tbody>
+    {% for p in pacientes %}
+      <tr>
+        <td data-titulo="Paciente"><a href="{{ url_for('paciente_ficha', paciente_id=p.id) }}">{{ p.apellidos }}, {{ p.nombres }}</a></td>
+        <td data-titulo="Documento">{{ p.documento or 'Sin documento' }}</td>
+        <td data-titulo="Edad">{{ edad(p.fecha_nacimiento, hoy) }} años</td>
+        <td data-titulo="Teléfono">{{ p.telefono or p.telefono_responsable or '—' }}</td>
+        <td>
+          {% if usuario.rol != 'MEDICO' %}
+          <a class="boton" href="{{ url_for('cita_nueva', paciente_id=p.id) }}">📅 Agendar cita</a>
+          {% endif %}
+        </td>
+      </tr>
+    {% endfor %}
+    </tbody>
+  </table>
+  </div>
+  {% endif %}
+{% endif %}
+{% endblock %}
