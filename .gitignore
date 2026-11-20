@@ -24,3 +24,6 @@ datos/
 .vscode/
 .idea/
 Thumbs.db
+
+# Archivos temporales de Word (se crean mientras un documento está abierto)
+~$*
