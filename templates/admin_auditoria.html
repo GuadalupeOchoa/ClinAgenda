@@ -14,6 +14,13 @@
     <h1>Historial de cambios</h1>
     <p>Quién hizo qué y cuándo (últimos 300 registros). Este historial no se puede borrar desde el sistema.</p>
   </div>
+  <div class="acciones">
+    {% if ingresos %}
+      <a class="boton boton-secundario" href="{{ url_for('admin_auditoria') }}">Ocultar ingresos al sistema</a>
+    {% else %}
+      <a class="boton boton-secundario" href="{{ url_for('admin_auditoria', ingresos=1) }}">Mostrar también ingresos al sistema</a>
+    {% endif %}
+  </div>
 </div>
 
 {% if not registros %}
@@ -27,9 +34,9 @@
       {% set a = ACCIONES.get(r.accion, (r.accion, 'estado-cancelada')) %}
       <tr>
         <td data-titulo="Fecha" style="white-space:nowrap"><b>{{ r.fecha.strftime('%d/%m/%Y') }}</b> <span class="suave">{{ r.fecha.strftime('%H:%M') }}</span></td>
-        <td data-titulo="Persona">{{ r.nombre or r.usuario or '—' }}</td>
+        <td data-titulo="Persona" style="white-space:nowrap">{{ r.nombre or r.usuario or '—' }}</td>
         <td data-titulo="Acción"><span class="pastilla {{ a[1] }}">{{ a[0] }}</span></td>
-        <td data-titulo="Sobre">{{ ENTIDADES.get(r.entidad, r.entidad) }} #{{ r.entidad_id or '' }}</td>
+        <td data-titulo="Sobre" style="white-space:nowrap">{{ ENTIDADES.get(r.entidad, r.entidad) }} #{{ r.entidad_id or '' }}</td>
         <td data-titulo="Detalle" class="suave">{{ r.detalle or '' }}</td>
       </tr>
     {% endfor %}

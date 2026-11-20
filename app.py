@@ -610,10 +610,12 @@ def admin_usuarios():
 @app.route("/admin/auditoria")
 @login_requerido("ADMIN")
 def admin_auditoria():
-    registros = consultar("""SELECT a.*, u.usuario, u.nombre FROM auditoria a
-                             LEFT JOIN usuarios u ON u.id=a.usuario_id
-                             ORDER BY a.fecha DESC LIMIT 300""")
-    return render_template("admin_auditoria.html", registros=registros)
+    ingresos = request.args.get("ingresos") == "1"
+    registros = consultar(f"""SELECT a.*, u.usuario, u.nombre FROM auditoria a
+                              LEFT JOIN usuarios u ON u.id=a.usuario_id
+                              {'' if ingresos else "WHERE a.accion <> 'INICIO_SESION'"}
+                              ORDER BY a.fecha DESC LIMIT 300""")
+    return render_template("admin_auditoria.html", registros=registros, ingresos=ingresos)
 
 
 # ------------------------------------------------------- errores amigables
