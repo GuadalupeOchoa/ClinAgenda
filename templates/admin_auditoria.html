@@ -1,22 +1,40 @@
 {% extends "base.html" %}
+{% from "_macros.html" import icono with context %}
 {% block titulo %}Historial de cambios{% endblock %}
 {% block contenido %}
-<h1>Historial de cambios</h1>
-<p class="ayuda">Quién hizo qué y cuándo (últimos 300 registros). Este historial no se puede borrar desde el sistema.</p>
-<div class="tabla-envoltura">
-<table class="tabla">
-  <thead><tr><th>Fecha y hora</th><th>Usuario</th><th>Acción</th><th>Sobre</th><th>Detalle</th></tr></thead>
-  <tbody>
-  {% for r in registros %}
-    <tr>
-      <td data-titulo="Fecha">{{ r.fecha.strftime('%d/%m/%Y %H:%M') }}</td>
-      <td data-titulo="Usuario">{{ r.usuario or '—' }}</td>
-      <td data-titulo="Acción">{{ r.accion }}</td>
-      <td data-titulo="Sobre">{{ r.entidad }} #{{ r.entidad_id or '' }}</td>
-      <td data-titulo="Detalle">{{ r.detalle or '' }}</td>
-    </tr>
-  {% endfor %}
-  </tbody>
-</table>
+{% set ACCIONES = {
+  'CREAR': ('Creó', 'estado-atendida'), 'EDITAR': ('Editó', 'estado-agendada'),
+  'CANCELAR': ('Canceló', 'estado-no_asistio'), 'REACTIVAR': ('Deshizo cancelación', 'estado-agendada'),
+  'ESTADO': ('Cambió estado', 'estado-agendada'), 'BORRAR': ('Quitó', 'estado-no_asistio'),
+  'INICIO_SESION': ('Entró al sistema', 'estado-cancelada'), 'CAMBIAR_CLAVE': ('Cambió contraseña', 'estado-cancelada'),
+  'ACTIVAR': ('Activó', 'estado-atendida'), 'DESACTIVAR': ('Desactivó', 'estado-no_asistio') } %}
+{% set ENTIDADES = {'cita': 'cita', 'paciente': 'paciente', 'usuario': 'usuario', 'medico': 'médico', 'horario': 'horario'} %}
+<div class="encabezado">
+  <div>
+    <h1>Historial de cambios</h1>
+    <p>Quién hizo qué y cuándo (últimos 300 registros). Este historial no se puede borrar desde el sistema.</p>
+  </div>
 </div>
+
+{% if not registros %}
+  <div class="vacio">{{ icono('historial') }}<h3>Aún no hay cambios registrados</h3></div>
+{% else %}
+<div class="tabla-envoltura">
+  <table class="tabla">
+    <thead><tr><th>Fecha y hora</th><th>Persona</th><th>Acción</th><th>Sobre</th><th>Detalle</th></tr></thead>
+    <tbody>
+    {% for r in registros %}
+      {% set a = ACCIONES.get(r.accion, (r.accion, 'estado-cancelada')) %}
+      <tr>
+        <td data-titulo="Fecha" style="white-space:nowrap"><b>{{ r.fecha.strftime('%d/%m/%Y') }}</b> <span class="suave">{{ r.fecha.strftime('%H:%M') }}</span></td>
+        <td data-titulo="Persona">{{ r.nombre or r.usuario or '—' }}</td>
+        <td data-titulo="Acción"><span class="pastilla {{ a[1] }}">{{ a[0] }}</span></td>
+        <td data-titulo="Sobre">{{ ENTIDADES.get(r.entidad, r.entidad) }} #{{ r.entidad_id or '' }}</td>
+        <td data-titulo="Detalle" class="suave">{{ r.detalle or '' }}</td>
+      </tr>
+    {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endif %}
 {% endblock %}

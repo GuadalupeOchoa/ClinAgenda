@@ -1,61 +1,90 @@
 {% extends "base.html" %}
+{% from "_macros.html" import icono, avatar, csrf with context %}
 {% block titulo %}Usuarios{% endblock %}
 {% block contenido %}
-<h1>Usuarios del sistema</h1>
-<p class="ayuda">Cada persona debe tener su propio usuario. Así se sabe quién hizo cada cambio. No comparta contraseñas.</p>
+{% set ROLES = {'ADMIN': 'Administración', 'RECEPCION': 'Recepción', 'MEDICO': 'Médico'} %}
+<div class="encabezado">
+  <div>
+    <h1>Usuarios del sistema</h1>
+    <p>Cada persona tiene su propio usuario: así se sabe quién hizo cada cambio. No comparta contraseñas.</p>
+  </div>
+  <div class="acciones">
+    <button class="boton" type="button" onclick="var f=document.getElementById('form-nuevo');f.classList.toggle('oculto');if(!f.classList.contains('oculto'))document.getElementById('nombre').focus()">{{ icono('usuario-mas') }} Nuevo usuario</button>
+  </div>
+</div>
 
-<form method="post" class="tarjeta formulario">
-  <h2>Nuevo usuario</h2>
-  <input type="hidden" name="csrf" value="{{ csrf_token }}">
+<form method="post" class="tarjeta oculto" id="form-nuevo">
+  <h2 style="margin-bottom:1rem">{{ icono('usuario-mas') }} Nuevo usuario</h2>
+  {{ csrf() }}
   <input type="hidden" name="accion" value="nuevo">
-  <label for="usuario_n">Usuario (para entrar)</label>
-  <input id="usuario_n" name="usuario" placeholder="rosa" required>
-  <label for="nombre">Nombre completo</label>
-  <input id="nombre" name="nombre" required>
-  <label for="rol">Rol</label>
-  <select id="rol" name="rol">
-    <option value="RECEPCION">Recepción (agenda, pacientes, cancelar)</option>
-    <option value="MEDICO">Médico (solo ve su propia agenda)</option>
-    <option value="ADMIN">Administrador (todo, incluido el historial de cambios)</option>
-  </select>
-  <label for="medico_id">Si es médico, ¿cuál?</label>
-  <select id="medico_id" name="medico_id">
-    <option value="">—</option>
-    {% for m in medicos %}<option value="{{ m.id }}">{{ m.nombres }}</option>{% endfor %}
-  </select>
-  <label for="clave">Contraseña inicial (mínimo 8 caracteres)</label>
-  <input id="clave" name="clave" type="password" minlength="8" required autocomplete="new-password">
-  <button class="boton" type="submit">Crear usuario</button>
+  <div class="fila-2">
+    <div class="campo"><label for="nombre">Nombre completo</label><input id="nombre" name="nombre" required></div>
+    <div class="campo"><label for="usuario_n">Usuario para entrar</label><input id="usuario_n" name="usuario" placeholder="Ej: rosa" autocapitalize="none" required>
+      <p class="ayuda-campo">Solo letras y números, sin espacios.</p></div>
+    <div class="campo">
+      <label for="rol">Rol</label>
+      <select id="rol" name="rol">
+        <option value="RECEPCION">Recepción — agenda, pacientes y cancelar</option>
+        <option value="MEDICO">Médico — solo ve su propia agenda</option>
+        <option value="ADMIN">Administración — todo, incluido el historial</option>
+      </select>
+    </div>
+    <div class="campo">
+      <label for="medico_id">Si es médico, ¿cuál?</label>
+      <select id="medico_id" name="medico_id">
+        <option value="">—</option>
+        {% for m in medicos %}<option value="{{ m.id }}">{{ m.nombres }}</option>{% endfor %}
+      </select>
+    </div>
+    <div class="campo"><label for="clave">Contraseña inicial</label>
+      <input id="clave" name="clave" type="password" minlength="8" required autocomplete="new-password">
+      <p class="ayuda-campo">Mínimo 8 caracteres.</p></div>
+  </div>
+  <div class="acciones">
+    <button class="boton" type="submit">{{ icono('mas') }} Crear usuario</button>
+    <button class="boton boton-secundario" type="button" onclick="document.getElementById('form-nuevo').classList.add('oculto')">Cancelar</button>
+  </div>
 </form>
 
 <div class="tabla-envoltura">
-<table class="tabla">
-  <thead><tr><th>Usuario</th><th>Nombre</th><th>Rol</th><th>Estado</th><th>Acciones</th></tr></thead>
-  <tbody>
-  {% for u in usuarios %}
-    <tr>
-      <td data-titulo="Usuario">{{ u.usuario }}</td>
-      <td data-titulo="Nombre">{{ u.nombre }}{% if u.medico %}<br><small>{{ u.medico }}</small>{% endif %}</td>
-      <td data-titulo="Rol">{{ u.rol|title }}</td>
-      <td data-titulo="Estado">{{ 'Activo' if u.activo else 'Desactivado' }}</td>
-      <td class="acciones-fila">
-        <form method="post">
-          <input type="hidden" name="csrf" value="{{ csrf_token }}">
-          <input type="hidden" name="usuario_id" value="{{ u.id }}">
-          <button class="boton boton-chico boton-secundario" name="accion" value="{{ 'desactivar' if u.activo else 'activar' }}">
-            {{ 'Desactivar' if u.activo else 'Activar' }}</button>
-        </form>
-        <form method="post">
-          <input type="hidden" name="csrf" value="{{ csrf_token }}">
-          <input type="hidden" name="usuario_id" value="{{ u.id }}">
-          <input type="hidden" name="accion" value="clave">
-          <input name="clave" type="password" placeholder="Nueva contraseña" minlength="8" required autocomplete="new-password">
-          <button class="boton boton-chico">Cambiar</button>
-        </form>
-      </td>
-    </tr>
-  {% endfor %}
-  </tbody>
-</table>
+  <table class="tabla">
+    <thead><tr><th>Persona</th><th>Usuario</th><th>Rol</th><th>Estado</th><th>Cambiar contraseña</th><th></th></tr></thead>
+    <tbody>
+    {% for u in usuarios %}
+      <tr style="{{ 'opacity:.55' if not u.activo }}">
+        <td>
+          <div class="persona">
+            {{ avatar(u.nombre) }}
+            <div class="persona-texto"><b>{{ u.nombre }}</b>{% if u.medico and u.medico != u.nombre %}<small>{{ u.medico }}</small>{% endif %}</div>
+          </div>
+        </td>
+        <td data-titulo="Usuario"><code style="font-size:.95rem">{{ u.usuario }}</code></td>
+        <td data-titulo="Rol"><span class="chip rol-{{ u.rol|lower }}">{{ ROLES[u.rol] }}</span></td>
+        <td data-titulo="Estado"><span class="pastilla {{ 'estado-atendida' if u.activo else 'estado-cancelada' }}">{{ 'Activo' if u.activo else 'Desactivado' }}</span></td>
+        <td>
+          <form method="post" style="display:flex;gap:.4rem;margin:0">
+            {{ csrf() }}
+            <input type="hidden" name="usuario_id" value="{{ u.id }}">
+            <input type="hidden" name="accion" value="clave">
+            <input name="clave" type="password" placeholder="Nueva contraseña" minlength="8" required autocomplete="new-password"
+                   style="min-height:40px;padding:.4rem .7rem;width:170px;min-width:170px" aria-label="Nueva contraseña para {{ u.nombre }}">
+            <button class="boton boton-chico boton-secundario">{{ icono('llave') }} Cambiar</button>
+          </form>
+        </td>
+        <td style="text-align:right">
+          {% if u.id != usuario.id %}
+          <form method="post" class="en-linea">
+            {{ csrf() }}
+            <input type="hidden" name="usuario_id" value="{{ u.id }}">
+            <button class="boton boton-chico {{ 'boton-peligro-suave' if u.activo else 'boton-suave' }}" name="accion" value="{{ 'desactivar' if u.activo else 'activar' }}"
+                    {% if u.activo %}data-confirmar="¿Desactivar a {{ u.nombre }}? Ya no podrá entrar al sistema."{% endif %}>
+              {{ 'Desactivar' if u.activo else 'Activar' }}</button>
+          </form>
+          {% else %}<small>(usted)</small>{% endif %}
+        </td>
+      </tr>
+    {% endfor %}
+    </tbody>
+  </table>
 </div>
 {% endblock %}

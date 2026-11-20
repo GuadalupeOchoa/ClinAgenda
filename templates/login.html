@@ -1,16 +1,44 @@
 {% extends "base.html" %}
+{% from "_macros.html" import icono, csrf with context %}
 {% block titulo %}Ingresar{% endblock %}
-{% block contenido %}
-<section class="tarjeta login">
-  <h1>ClinAgenda</h1>
-  <p class="ayuda">Escriba su usuario y contraseña para entrar.</p>
-  <form method="post">
-    <input type="hidden" name="csrf" value="{{ csrf_token }}">
-    <label for="usuario">Usuario</label>
-    <input id="usuario" name="usuario" value="{{ usuario_escrito or '' }}" autocomplete="username" required autofocus>
-    <label for="clave">Contraseña</label>
-    <input id="clave" name="clave" type="password" autocomplete="current-password" required>
-    <button class="boton boton-grande" type="submit">Entrar</button>
-  </form>
-</section>
+{% block publico %}
+<div class="login-pagina">
+  <section class="login-marca">
+    <div>
+      <a class="marca" href="#" style="padding:0"><span class="marca-logo">{{ icono('logo') }}</span> ClinAgenda</a>
+      <h1>Agenda de citas sin cruces ni papeles perdidos</h1>
+      <p>Un solo lugar para las citas de las tres clínicas de la Dra. Paredes.</p>
+    </div>
+    <div class="login-clinicas">
+      <span>Clínica Centro</span><span>Clínica Norte</span><span>Clínica Sur</span>
+    </div>
+  </section>
+
+  <section class="login-form">
+    <div class="login-caja">
+      <h2>Bienvenida, bienvenido</h2>
+      <p>Escriba su usuario y su contraseña para entrar.</p>
+      {% include "_mensajes.html" %}
+      <form method="post">
+        {{ csrf() }}
+        <div class="campo">
+          <label for="usuario">Usuario</label>
+          <div class="con-icono">{{ icono('usuario') }}
+            <input id="usuario" name="usuario" value="{{ usuario_escrito or '' }}" autocomplete="username"
+                   autocapitalize="none" placeholder="Ej: rosa" required autofocus>
+          </div>
+        </div>
+        <div class="campo">
+          <label for="clave">Contraseña</label>
+          <div class="clave-envoltura con-icono">{{ icono('llave') }}
+            <input id="clave" name="clave" type="password" autocomplete="current-password" required>
+            <button class="ver-clave" type="button" onclick="var c=document.getElementById('clave');c.type=c.type==='password'?'text':'password';this.textContent=c.type==='password'?'Mostrar':'Ocultar'">Mostrar</button>
+          </div>
+        </div>
+        <button class="boton boton-grande boton-bloque" type="submit">Entrar {{ icono('derecha') }}</button>
+      </form>
+      <p class="ayuda-campo" style="margin-top:1.4rem">¿Olvidó su contraseña? Pida a la administradora que le asigne una nueva.</p>
+    </div>
+  </section>
+</div>
 {% endblock %}

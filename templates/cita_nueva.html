@@ -1,60 +1,114 @@
 {% extends "base.html" %}
+{% from "_macros.html" import icono, avatar, csrf with context %}
 {% block titulo %}Agendar cita{% endblock %}
 {% block contenido %}
-<h1>Agendar cita para {{ p.nombres }} {{ p.apellidos }}</h1>
+{% set paso = 4 if libres is not none else (3 if medico_id else (2 if clinica_id else 1)) %}
+<a class="migas" href="{{ url_for('paciente_ficha', paciente_id=p.id) }}">{{ icono('izquierda') }} Volver a la ficha</a>
+<div class="encabezado"><div><h1>Agendar cita</h1><p>Siga los pasos en orden. Puede cambiar cualquier elección tocándola de nuevo.</p></div></div>
 
-<form method="get" class="tarjeta formulario">
-  <label for="clinica_id">1. ¿En qué clínica?</label>
-  <select id="clinica_id" name="clinica_id" onchange="this.form.medico_id.value=''; this.form.submit()">
-    <option value="">— Elija la clínica —</option>
-    {% for cl in clinicas %}
-      <option value="{{ cl.id }}" {% if cl.id == clinica_id %}selected{% endif %}>{{ cl.nombre }}</option>
-    {% endfor %}
-  </select>
+<ol class="pasos" aria-label="Pasos">
+  {% for nombre in ['Clínica', 'Médico', 'Día', 'Hora'] %}
+    <li class="paso {{ 'hecho' if loop.index < paso else ('actual' if loop.index == paso) }}">{{ nombre }}</li>
+  {% endfor %}
+</ol>
 
-  {% if clinica_id %}
-  <label for="medico_id">2. ¿Con qué médico?</label>
-  <select id="medico_id" name="medico_id" onchange="this.form.submit()">
-    <option value="">— Elija el médico —</option>
-    {% for m in medicos %}
-      <option value="{{ m.id }}" {% if m.id == medico_id %}selected{% endif %}>{{ m.nombres }}{% if m.especialidad %} ({{ m.especialidad }}){% endif %}</option>
-    {% endfor %}
-  </select>
-  {% else %}
-  <input type="hidden" name="medico_id" value="">
-  {% endif %}
+<div class="lateral">
+  <div>
+    <section class="tarjeta paso-bloque">
+      <h2><span class="numero">1</span> ¿En qué clínica?</h2>
+      <div class="opciones">
+        {% for cl in clinicas %}
+        <a class="opcion {{ 'elegida' if cl.id == clinica_id }}" href="{{ url_for('cita_nueva', paciente_id=p.id, clinica_id=cl.id) }}">
+          <span class="opcion-icono clinica-{{ cl.id }}">{{ icono('edificio') }}</span>
+          <span><b>{{ cl.nombre }}</b><small>{{ cl.direccion or '' }}</small></span>
+        </a>
+        {% endfor %}
+      </div>
+    </section>
 
-  {% if clinica_id and medico_id %}
-  <label for="fecha">3. ¿Qué día?</label>
-  <input id="fecha" type="date" name="fecha" value="{{ fecha or '' }}" min="{{ hoy }}" onchange="this.form.submit()">
-  <label for="motivo">Motivo de la consulta (opcional)</label>
-  <input id="motivo" name="motivo" value="{{ motivo }}" maxlength="300">
-  {% endif %}
+    {% if clinica_id %}
+    <section class="tarjeta paso-bloque">
+      <h2><span class="numero">2</span> ¿Con qué médico?</h2>
+      {% if not medicos %}
+        <p class="suave">Ningún médico tiene horario en esta clínica.</p>
+      {% endif %}
+      <div class="opciones">
+        {% for m in medicos %}
+        <a class="opcion {{ 'elegida' if m.id == medico_id }}" href="{{ url_for('cita_nueva', paciente_id=p.id, clinica_id=clinica_id, medico_id=m.id) }}">
+          {{ avatar(m.nombres) }}
+          <span><b>{{ m.nombres }}</b><small>{{ m.especialidad or 'Medicina' }}</small></span>
+        </a>
+        {% endfor %}
+      </div>
+    </section>
+    {% endif %}
 
-  <noscript><button class="boton" type="submit">Continuar</button></noscript>
-  <button class="boton boton-secundario" type="submit">Ver horarios disponibles</button>
-</form>
+    {% if clinica_id and medico_id %}
+    <section class="tarjeta paso-bloque">
+      <h2><span class="numero">3</span> ¿Qué día?</h2>
+      {% if dias %}
+      <p class="suave" style="margin-top:-.4rem">Días en que este médico atiende en esta clínica:</p>
+      {% endif %}
+      <div class="dias">
+        {% for d in dias %}
+        <a class="dia {{ 'elegida' if d == fecha }}" href="{{ url_for('cita_nueva', paciente_id=p.id, clinica_id=clinica_id, medico_id=medico_id, fecha=d) }}">
+          <small>{{ 'Hoy' if d == hoy else DIAS_SEMANA[d.weekday()][:3] }}</small><b>{{ d.day }}</b><small>{{ ['ene','feb','mar','abr','may','jun','jul','ago','sep','oct','nov','dic'][d.month-1] }}</small>
+        </a>
+        {% endfor %}
+        <form method="get">
+          <input type="hidden" name="clinica_id" value="{{ clinica_id }}">
+          <input type="hidden" name="medico_id" value="{{ medico_id }}">
+          <input type="date" name="fecha" value="{{ fecha or '' }}" min="{{ hoy }}" aria-label="Otra fecha" onchange="this.form.submit()">
+          <noscript><button class="boton boton-chico">Ir</button></noscript>
+        </form>
+      </div>
+    </section>
+    {% endif %}
 
-{% if libres is not none %}
-<section class="tarjeta">
-  <h2>4. Elija la hora — {{ fecha|fecha }}</h2>
-  {% if not libres %}
-    <p class="vacio">No hay horarios libres para este médico ese día en esta clínica. Pruebe otro día u otro médico.</p>
-  {% else %}
-  <form method="post" class="horas">
-    <input type="hidden" name="csrf" value="{{ csrf_token }}">
-    <input type="hidden" name="clinica_id" value="{{ clinica_id }}">
-    <input type="hidden" name="medico_id" value="{{ medico_id }}">
-    <input type="hidden" name="fecha" value="{{ fecha }}">
-    <input type="hidden" name="motivo" value="{{ motivo }}">
-    {% for h in libres %}
-      <button class="boton hora" name="hora" value="{{ h|hora }}"
-              onclick="return confirm('¿Confirmar la cita del {{ fecha|fecha }} a las {{ h|hora }}?')">{{ h|hora }}</button>
-    {% endfor %}
-  </form>
-  {% endif %}
-</section>
-{% endif %}
+    {% if libres is not none %}
+    <section class="tarjeta paso-bloque">
+      <h2><span class="numero">4</span> Elija la hora — {{ fecha|fecha }}</h2>
+      {% if not libres %}
+        <div class="vacio" style="padding:1.6rem">{{ icono('reloj') }}<h3>No hay horas libres ese día</h3><p>Pruebe otro día u otro médico.</p></div>
+      {% else %}
+      <form method="post">
+        {{ csrf() }}
+        <input type="hidden" name="clinica_id" value="{{ clinica_id }}">
+        <input type="hidden" name="medico_id" value="{{ medico_id }}">
+        <input type="hidden" name="fecha" value="{{ fecha }}">
+        <div class="campo">
+          <label for="motivo">Motivo de la consulta <span class="opcional">(opcional)</span></label>
+          <input id="motivo" name="motivo" value="{{ motivo }}" maxlength="300" placeholder="Ej: control, dolor de cabeza, vacuna">
+        </div>
+        {% set manana = libres|selectattr('hour', 'lt', 12)|list %}
+        {% set tarde = libres|selectattr('hour', 'ge', 12)|list %}
+        {% for titulo, ic, grupo in [('Mañana', 'sol', manana), ('Tarde', 'atardecer', tarde)] if grupo %}
+        <div class="grupo-horas">
+          <h3>{{ icono(ic) }} {{ titulo }}</h3>
+          <div class="horas">
+            {% for h in grupo %}
+            <button class="boton hora" name="hora" value="{{ h|hora }}"
+                    data-confirmar="¿Agendar a {{ p.nombres }} {{ p.apellidos }} con {{ medico_sel.nombres }} el {{ fecha|fecha }} a las {{ h|hora }}?">{{ h|hora }}</button>
+            {% endfor %}
+          </div>
+        </div>
+        {% endfor %}
+      </form>
+      {% endif %}
+    </section>
+    {% endif %}
+  </div>
 
-<p><a class="boton boton-secundario" href="{{ url_for('paciente_ficha', paciente_id=p.id) }}">Volver</a></p>
+  <aside class="tarjeta resumen-paciente">
+    <div class="persona">
+      {{ avatar(p.nombres ~ ' ' ~ p.apellidos) }}
+      <div class="persona-texto"><b>{{ p.nombres }} {{ p.apellidos }}</b><small>{{ p.documento or 'Sin documento' }}</small></div>
+    </div>
+    <dl class="datos-lista">
+      <div>{{ icono('edificio') }}<span><dt>Clínica</dt><dd>{{ clinica_sel.nombre if clinica_sel else '—' }}</dd></span></div>
+      <div>{{ icono('estetoscopio') }}<span><dt>Médico</dt><dd>{{ medico_sel.nombres if medico_sel else '—' }}</dd></span></div>
+      <div>{{ icono('calendario') }}<span><dt>Día</dt><dd>{{ fecha|fecha if fecha else '—' }}</dd></span></div>
+    </dl>
+  </aside>
+</div>
 {% endblock %}

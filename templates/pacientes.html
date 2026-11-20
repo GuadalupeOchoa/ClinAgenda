@@ -1,42 +1,64 @@
 {% extends "base.html" %}
+{% from "_macros.html" import icono, avatar with context %}
 {% block titulo %}Pacientes{% endblock %}
 {% block contenido %}
-<h1>Buscar paciente</h1>
-<p class="ayuda">Paso 1: busque al paciente por su <b>nombre</b>, <b>cédula</b> o <b>teléfono</b>. Si no aparece, regístrelo.</p>
-
-<form class="buscador" method="get">
-  <input name="q" value="{{ q }}" placeholder="Ej: María López o 1712345678" aria-label="Buscar paciente" autofocus>
-  <button class="boton boton-grande" type="submit">🔍 Buscar</button>
-</form>
-
-{% if usuario.rol != 'MEDICO' %}
-<p><a class="boton boton-secundario" href="{{ url_for('paciente_form') }}">➕ Registrar paciente nuevo</a></p>
-{% endif %}
-
-{% if q %}
-  {% if not pacientes %}
-    <p class="vacio">No se encontró ningún paciente con «{{ q }}». Revise cómo lo escribió o regístrelo como nuevo.</p>
-  {% else %}
-  <div class="tabla-envoltura">
-  <table class="tabla">
-    <thead><tr><th>Paciente</th><th>Documento</th><th>Edad</th><th>Teléfono</th><th></th></tr></thead>
-    <tbody>
-    {% for p in pacientes %}
-      <tr>
-        <td data-titulo="Paciente"><a href="{{ url_for('paciente_ficha', paciente_id=p.id) }}">{{ p.apellidos }}, {{ p.nombres }}</a></td>
-        <td data-titulo="Documento">{{ p.documento or 'Sin documento' }}</td>
-        <td data-titulo="Edad">{{ edad(p.fecha_nacimiento, hoy) }} años</td>
-        <td data-titulo="Teléfono">{{ p.telefono or p.telefono_responsable or '—' }}</td>
-        <td>
-          {% if usuario.rol != 'MEDICO' %}
-          <a class="boton" href="{{ url_for('cita_nueva', paciente_id=p.id) }}">📅 Agendar cita</a>
-          {% endif %}
-        </td>
-      </tr>
-    {% endfor %}
-    </tbody>
-  </table>
+<div class="encabezado">
+  <div>
+    <h1>Pacientes</h1>
+    <p>Busque al paciente por su <b>nombre</b>, <b>cédula</b> o <b>teléfono</b>. No importan las tildes ni las mayúsculas.</p>
+  </div>
+  {% if usuario.rol != 'MEDICO' %}
+  <div class="acciones">
+    <a class="boton boton-secundario" href="{{ url_for('paciente_form') }}">{{ icono('usuario-mas') }} Registrar paciente nuevo</a>
   </div>
   {% endif %}
+</div>
+
+<form class="tarjeta" method="get" role="search">
+  <div class="buscador">
+    <div class="con-icono">{{ icono('buscar') }}
+      <input name="q" value="{{ q }}" placeholder="Ej: María López, 1712345678 o 0991234567" aria-label="Buscar paciente" autofocus>
+    </div>
+    <button class="boton boton-grande" type="submit">Buscar</button>
+  </div>
+</form>
+
+{% if q %}
+  <h2 style="margin:0 0 .8rem">
+    {% if pacientes %}{{ pacientes|length }} resultado{{ 's' if pacientes|length != 1 }} para «{{ q }}»{% endif %}
+  </h2>
+{% elif pacientes %}
+  <h2 style="margin:0 0 .8rem">Registrados recientemente</h2>
+{% endif %}
+
+{% if q and not pacientes %}
+  <div class="vacio">
+    {{ icono('buscar') }}
+    <h3>No encontramos a «{{ q }}»</h3>
+    <p>Revise cómo lo escribió, pruebe solo con el apellido o con el número de cédula.</p>
+    {% if usuario.rol != 'MEDICO' %}<a class="boton" href="{{ url_for('paciente_form') }}">{{ icono('usuario-mas') }} Registrarlo como paciente nuevo</a>{% endif %}
+  </div>
+{% else %}
+<div class="resultados">
+  {% for p in pacientes %}
+  <article class="resultado">
+    <div class="persona">
+      {{ avatar(p.nombres ~ ' ' ~ p.apellidos) }}
+      <div class="persona-texto">
+        <a href="{{ url_for('paciente_ficha', paciente_id=p.id) }}">{{ p.nombres }} {{ p.apellidos }}</a>
+        <div class="resultado-datos">
+          <span>{{ icono('documento') }} {{ p.documento or 'Sin documento' }}</span>
+          <span>{{ icono('pastel') }} {{ edad(p.fecha_nacimiento, hoy) }} años</span>
+          <span>{{ icono('telefono') }} {{ p.telefono or p.telefono_responsable or 'Sin teléfono' }}</span>
+        </div>
+      </div>
+    </div>
+    <a class="boton boton-secundario" href="{{ url_for('paciente_ficha', paciente_id=p.id) }}">Ver ficha</a>
+    {% if usuario.rol != 'MEDICO' %}
+    <a class="boton" href="{{ url_for('cita_nueva', paciente_id=p.id) }}">{{ icono('calendario-mas') }} Agendar cita</a>
+    {% endif %}
+  </article>
+  {% endfor %}
+</div>
 {% endif %}
 {% endblock %}

@@ -1,0 +1,9 @@
+{% from "_macros.html" import icono %}
+{% with mensajes = get_flashed_messages(with_categories=true) %}
+  {% for tipo, texto in mensajes %}
+    <div class="mensaje mensaje-{{ tipo }}" role="alert">
+      {{ icono({'ok': 'check-circulo', 'error': 'alerta', 'aviso': 'info'}.get(tipo, 'info')) }}
+      <span>{{ texto }}</span>
+    </div>
+  {% endfor %}
+{% endwith %}

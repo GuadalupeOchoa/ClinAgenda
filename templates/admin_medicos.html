@@ -1,61 +1,89 @@
 {% extends "base.html" %}
-{% block titulo %}Médicos{% endblock %}
+{% from "_macros.html" import icono, avatar, clinica, csrf with context %}
+{% block titulo %}Médicos y horarios{% endblock %}
 {% block contenido %}
-<h1>Médicos y horarios</h1>
+<div class="encabezado">
+  <div>
+    <h1>Médicos y horarios</h1>
+    <p>Solo se pueden agendar citas en los horarios configurados aquí. Un médico puede atender en varias clínicas, pero nunca a la misma hora.</p>
+  </div>
+</div>
 
-<div class="dos-columnas">
-  <form method="post" class="tarjeta formulario">
-    <h2>Nuevo médico</h2>
-    <input type="hidden" name="csrf" value="{{ csrf_token }}">
+<div class="rejilla-2">
+  <form method="post" class="tarjeta">
+    <h2 style="margin-bottom:1rem">{{ icono('usuario-mas') }} Nuevo médico</h2>
+    {{ csrf() }}
     <input type="hidden" name="accion" value="nuevo_medico">
-    <label for="nombres">Nombre completo</label>
-    <input id="nombres" name="nombres" placeholder="Dr. Juan Pérez" required>
-    <label for="especialidad">Especialidad</label>
-    <input id="especialidad" name="especialidad">
-    <button class="boton" type="submit">Crear médico</button>
+    <div class="campo">
+      <label for="nombres">Nombre completo</label>
+      <input id="nombres" name="nombres" placeholder="Dr. Juan Pérez" required>
+    </div>
+    <div class="campo">
+      <label for="especialidad">Especialidad <span class="opcional">(opcional)</span></label>
+      <input id="especialidad" name="especialidad" placeholder="Medicina general">
+    </div>
+    <button class="boton" type="submit">{{ icono('mas') }} Crear médico</button>
   </form>
 
-  <form method="post" class="tarjeta formulario">
-    <h2>Agregar horario de atención</h2>
-    <input type="hidden" name="csrf" value="{{ csrf_token }}">
+  <form method="post" class="tarjeta">
+    <h2 style="margin-bottom:1rem">{{ icono('reloj') }} Agregar horario de atención</h2>
+    {{ csrf() }}
     <input type="hidden" name="accion" value="nuevo_horario">
-    <label for="medico_id">Médico</label>
-    <select id="medico_id" name="medico_id" required>
-      {% for m in medicos %}<option value="{{ m.id }}">{{ m.nombres }}</option>{% endfor %}
-    </select>
-    <label for="clinica_id">Clínica</label>
-    <select id="clinica_id" name="clinica_id" required>
-      {% for cl in clinicas %}<option value="{{ cl.id }}">{{ cl.nombre }}</option>{% endfor %}
-    </select>
-    <label for="dia_semana">Día</label>
-    <select id="dia_semana" name="dia_semana">
-      {% for d in DIAS_SEMANA %}<option value="{{ loop.index0 }}">{{ d }}</option>{% endfor %}
-    </select>
-    <label for="hora_inicio">Desde</label>
-    <input id="hora_inicio" type="time" name="hora_inicio" value="08:00" required>
-    <label for="hora_fin">Hasta</label>
-    <input id="hora_fin" type="time" name="hora_fin" value="13:00" required>
-    <button class="boton" type="submit">Agregar horario</button>
+    <div class="fila-2">
+      <div class="campo">
+        <label for="medico_id">Médico</label>
+        <select id="medico_id" name="medico_id" required>
+          {% for m in medicos %}<option value="{{ m.id }}">{{ m.nombres }}</option>{% endfor %}
+        </select>
+      </div>
+      <div class="campo">
+        <label for="clinica_id">Clínica</label>
+        <select id="clinica_id" name="clinica_id" required>
+          {% for cl in clinicas %}<option value="{{ cl.id }}">{{ cl.nombre }}</option>{% endfor %}
+        </select>
+      </div>
+    </div>
+    <div class="campo">
+      <label for="dia_semana">Día</label>
+      <select id="dia_semana" name="dia_semana">
+        {% for d in DIAS_SEMANA %}<option value="{{ loop.index0 }}">{{ d }}</option>{% endfor %}
+      </select>
+    </div>
+    <div class="fila-2">
+      <div class="campo"><label for="hora_inicio">Desde</label><input id="hora_inicio" type="time" name="hora_inicio" value="08:00" required></div>
+      <div class="campo"><label for="hora_fin">Hasta</label><input id="hora_fin" type="time" name="hora_fin" value="13:00" required></div>
+    </div>
+    <button class="boton" type="submit">{{ icono('mas') }} Agregar horario</button>
   </form>
 </div>
 
-{% for m in medicos %}
-<section class="tarjeta">
-  <h2>{{ m.nombres }} <small>{{ m.especialidad or '' }}</small></h2>
+<h2 style="margin:.6rem 0 1rem">{{ medicos|length }} médicos</h2>
+<div class="medicos">
+  {% for m in medicos %}
   {% set hs = por_medico.get(m.id, []) %}
-  {% if not hs %}<p class="vacio">Sin horarios: no se le pueden agendar citas.</p>{% endif %}
-  <ul class="lista-horarios">
+  <section class="tarjeta medico" style="margin:0">
+    <div class="persona">
+      {{ avatar(m.nombres) }}
+      <div class="persona-texto"><b>{{ m.nombres }}</b><small>{{ m.especialidad or 'Sin especialidad' }}</small></div>
+    </div>
+    {% if not hs %}
+      <p class="mensaje mensaje-aviso" style="margin:0">{{ icono('alerta') }} Sin horarios: no se le pueden agendar citas.</p>
+    {% endif %}
     {% for h in hs %}
-    <li>{{ DIAS_SEMANA[h.dia_semana] }} · {{ h.hora_inicio|hora }}–{{ h.hora_fin|hora }} · {{ h.clinica }}
-      <form method="post" class="en-linea" onsubmit="return confirm('¿Quitar este horario?')">
-        <input type="hidden" name="csrf" value="{{ csrf_token }}">
+    <div class="horario">
+      <span class="horario-dia">{{ DIAS_SEMANA[h.dia_semana] }}</span>
+      <span class="horario-hora">{{ h.hora_inicio|hora }} – {{ h.hora_fin|hora }}</span>
+      {{ clinica(h.clinica_id, h.clinica) }}
+      <form method="post" class="en-linea">
+        {{ csrf() }}
         <input type="hidden" name="accion" value="borrar_horario">
         <input type="hidden" name="horario_id" value="{{ h.id }}">
-        <button class="boton boton-chico boton-secundario">Quitar</button>
+        <button class="boton-quitar" title="Quitar horario" aria-label="Quitar horario"
+                data-confirmar="¿Quitar el horario del {{ DIAS_SEMANA[h.dia_semana] }} de {{ m.nombres }}? Las citas ya agendadas no se borran.">{{ icono('papelera') }}</button>
       </form>
-    </li>
+    </div>
     {% endfor %}
-  </ul>
-</section>
-{% endfor %}
+  </section>
+  {% endfor %}
+</div>
 {% endblock %}

@@ -1,35 +1,94 @@
+{% from "_macros.html" import icono, avatar with context %}
 <!doctype html>
 <html lang="es">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#0b2e3d">
   <title>{% block titulo %}ClinAgenda{% endblock %} · ClinAgenda</title>
   <link rel="stylesheet" href="{{ url_for('static', filename='css/estilos.css') }}">
 </head>
 <body>
-  {% if usuario %}
-  <header class="barra no-imprimir">
-    <a class="marca" href="{{ url_for('agenda') }}">ClinAgenda</a>
-    <nav>
-      <a href="{{ url_for('agenda') }}">📅 Agenda</a>
-      <a href="{{ url_for('pacientes') }}">👤 Pacientes</a>
+{% include "_iconos.html" %}
+
+{% if usuario %}
+{% set ruta = request.endpoint or '' %}
+<div class="app">
+  <aside class="menu" id="menu">
+    <a class="marca" href="{{ url_for('agenda') }}">
+      <span class="marca-logo">{{ icono('logo') }}</span> ClinAgenda
+    </a>
+    <nav aria-label="Menú principal">
+      <a href="{{ url_for('agenda') }}" class="{{ 'activo' if ruta == 'agenda' }}">{{ icono('calendario') }} Agenda</a>
+      <a href="{{ url_for('pacientes') }}" class="{{ 'activo' if ruta.startswith('paciente') or ruta.startswith('cita') }}">{{ icono('usuarios') }} Pacientes</a>
       {% if usuario.rol == 'ADMIN' %}
-        <a href="{{ url_for('admin_medicos') }}">Médicos</a>
-        <a href="{{ url_for('admin_usuarios') }}">Usuarios</a>
-        <a href="{{ url_for('admin_auditoria') }}">Historial de cambios</a>
+        <div class="menu-titulo">Administración</div>
+        <a href="{{ url_for('admin_medicos') }}" class="{{ 'activo' if ruta == 'admin_medicos' }}">{{ icono('estetoscopio') }} Médicos y horarios</a>
+        <a href="{{ url_for('admin_usuarios') }}" class="{{ 'activo' if ruta == 'admin_usuarios' }}">{{ icono('llave') }} Usuarios</a>
+        <a href="{{ url_for('admin_auditoria') }}" class="{{ 'activo' if ruta == 'admin_auditoria' }}">{{ icono('historial') }} Historial de cambios</a>
       {% endif %}
     </nav>
-    <div class="quien">{{ usuario.nombre }} · <a href="{{ url_for('logout') }}">Salir</a></div>
-  </header>
-  {% endif %}
+    <div class="perfil">
+      {{ avatar(usuario.nombre, 'avatar-oscuro') }}
+      <div class="perfil-texto">
+        <b>{{ usuario.nombre }}</b>
+        <span>{{ {'ADMIN': 'Administración', 'RECEPCION': 'Recepción', 'MEDICO': 'Médico'}[usuario.rol] }}</span>
+      </div>
+      <a href="{{ url_for('logout') }}" title="Salir del sistema" aria-label="Salir del sistema">{{ icono('salir') }}</a>
+    </div>
+  </aside>
+  <div class="velo" onclick="document.body.classList.remove('menu-abierto')"></div>
 
-  <main class="contenido">
-    {% with mensajes = get_flashed_messages(with_categories=true) %}
-      {% for tipo, texto in mensajes %}
-        <div class="mensaje mensaje-{{ tipo }}" role="alert">{{ texto }}</div>
-      {% endfor %}
-    {% endwith %}
-    {% block contenido %}{% endblock %}
-  </main>
+  <div class="principal">
+    <header class="barra-movil">
+      <button class="boton-menu" type="button" aria-label="Abrir menú" onclick="document.body.classList.add('menu-abierto')">{{ icono('menu') }}</button>
+      <a class="marca" href="{{ url_for('agenda') }}"><span class="marca-logo">{{ icono('logo') }}</span> ClinAgenda</a>
+    </header>
+    <main class="contenido">
+      {% include "_mensajes.html" %}
+      {% block contenido %}{% endblock %}
+    </main>
+  </div>
+</div>
+{% else %}
+  {% block publico %}
+  <main class="contenido">{% include "_mensajes.html" %}{{ self.contenido() }}</main>
+  {% endblock %}
+{% endif %}
+
+<dialog class="confirmar" id="confirmar">
+  <div class="confirmar-cuerpo">
+    <span class="confirmar-icono">{{ icono('pregunta') }}</span>
+    <p id="confirmar-texto"></p>
+  </div>
+  <div class="confirmar-botones">
+    <button class="boton boton-secundario boton-grande" type="button" data-respuesta="no">No</button>
+    <button class="boton boton-grande" type="button" data-respuesta="si">Sí, continuar</button>
+  </div>
+</dialog>
+
+<script>
+/* Confirmación amable antes de acciones importantes: agregue data-confirmar="mensaje" a un botón o enlace */
+(function () {
+  var dialogo = document.getElementById('confirmar'), pendiente = null;
+  document.addEventListener('click', function (e) {
+    var el = e.target.closest('[data-confirmar]');
+    if (!el || !dialogo.showModal) return;
+    if (el.dataset.confirmado) { delete el.dataset.confirmado; return; }
+    e.preventDefault();
+    pendiente = el;
+    document.getElementById('confirmar-texto').textContent = el.dataset.confirmar;
+    dialogo.showModal();
+  });
+  dialogo.addEventListener('click', function (e) {
+    var r = e.target.closest('[data-respuesta]');
+    if (!r && e.target !== dialogo) return;
+    dialogo.close();
+    if (r && r.dataset.respuesta === 'si' && pendiente) { pendiente.dataset.confirmado = '1'; pendiente.click(); }
+    pendiente = null;
+  });
+})();
+</script>
+{% block scripts %}{% endblock %}
 </body>
 </html>
