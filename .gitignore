@@ -1,0 +1,21 @@
+# Credenciales y entorno
+.env
+venv/
+.venv/
+
+# Python
+__pycache__/
+*.pyc
+
+# Respaldos de la base (contienen datos de pacientes)
+respaldos/
+*.sql.backup
+*.dump
+
+# Datos de prueba entregados por la organización (no subir datos de personas)
+datos/
+
+# Editor / SO
+.vscode/
+.idea/
+Thumbs.db
