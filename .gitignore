@@ -1,5 +1,6 @@
 # Credenciales y entorno
 .env
+demo_credenciales.txt
 venv/
 .venv/
 
@@ -16,6 +17,7 @@ respaldos/
 datos/
 
 # Editor / SO
+.claude/
 .vscode/
 .idea/
 Thumbs.db
