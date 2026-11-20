@@ -97,6 +97,8 @@ def login_requerido(*roles):
 
 @app.route("/login", methods=["GET", "POST"])
 def login():
+    if g.usuario:
+        return redirect(url_for("agenda"))
     if request.method == "POST":
         nombre = v.limpiar_texto(request.form.get("usuario"), 40).lower()
         clave = request.form.get("clave", "")
@@ -159,7 +161,7 @@ def agenda():
 @login_requerido()
 def pacientes():
     q = v.limpiar_texto(request.args.get("q"), 100)
-    lista = []
+    lista = consultar("SELECT * FROM pacientes ORDER BY creado_en DESC LIMIT 6")
     if q:
         clave = v.clave_busqueda(q)
         lista = consultar(
@@ -321,6 +323,15 @@ def horarios_libres(medico_id, clinica_id, fecha):
     return sorted(libres)
 
 
+def describir_cita(cur, paciente_id, medico_id, clinica_id, fecha, hora):
+    """Texto entendible para el historial: 'María López · Dr. Luis Salazar · Clínica Norte · 23/11/2026 14:00'."""
+    cur.execute("""SELECT p.nombres || ' ' || p.apellidos AS paciente, m.nombres AS medico, cl.nombre AS clinica
+                   FROM pacientes p, medicos m, clinicas cl WHERE p.id=%s AND m.id=%s AND cl.id=%s""",
+                (paciente_id, medico_id, clinica_id))
+    r = cur.fetchone()
+    return f"{r['paciente']} · {r['medico']} · {r['clinica']} · {fecha:%d/%m/%Y} {hora:%H:%M}"
+
+
 @app.route("/citas/nueva/<int:paciente_id>", methods=["GET", "POST"])
 @login_requerido("ADMIN", "RECEPCION")
 def cita_nueva(paciente_id):
@@ -356,7 +367,7 @@ def cita_nueva(paciente_id):
                                 (paciente_id, medico_id, clinica_id, fecha, hora, motivo or None, g.usuario["id"]))
                     cita_id = cur.fetchone()["id"]
                     registrar_auditoria(cur, g.usuario["id"], "CREAR", "cita", cita_id,
-                                        f"{fecha} {hora:%H:%M} medico={medico_id} clinica={clinica_id}")
+                                        describir_cita(cur, paciente_id, medico_id, clinica_id, fecha, hora))
                 flash(f"Cita agendada para el {filtro_fecha(fecha)} a las {hora:%H:%M}.", "ok")
                 return redirect(url_for("paciente_ficha", paciente_id=paciente_id))
             except psycopg2.errors.UniqueViolation as ex:
@@ -371,14 +382,36 @@ def cita_nueva(paciente_id):
         medicos = consultar("""SELECT DISTINCT m.id, m.nombres, m.especialidad FROM medicos m
                                JOIN horarios_medico h ON h.medico_id=m.id
                                WHERE h.clinica_id=%s AND m.activo ORDER BY m.nombres""", (clinica_id,))
+    clinica_sel = next((cl for cl in clinicas if cl["id"] == clinica_id), None)
+    medico_sel = next((m for m in medicos if m["id"] == medico_id), None)
+    if medico_id and not medico_sel:
+        medico_id = None  # el médico elegido no atiende en esta clínica
+
+    # Próximos días en que el médico atiende en esa clínica (accesos rápidos)
+    dias = []
+    if clinica_sel and medico_sel:
+        dias_semana = {r["dia_semana"] for r in consultar(
+            "SELECT DISTINCT dia_semana FROM horarios_medico WHERE medico_id=%s AND clinica_id=%s",
+            (medico_id, clinica_id))}
+        d = hoy()
+        while len(dias) < 8 and d <= hoy() + timedelta(days=DIAS_MAX_ADELANTO):
+            if d.weekday() in dias_semana:
+                dias.append(d)
+            d += timedelta(days=1)
+
     libres = None
-    if clinica_id and medico_id and fecha and not (error and request.method == "GET"):
+    if clinica_sel and medico_sel and fecha and not (error and request.method == "GET"):
         libres = horarios_libres(medico_id, clinica_id, fecha)
     if error:
         flash(error, "error")
     return render_template("cita_nueva.html", p=p, clinicas=clinicas, medicos=medicos,
                            clinica_id=clinica_id, medico_id=medico_id, fecha=fecha,
-                           motivo=motivo, libres=libres)
+                           motivo=motivo, libres=libres, dias=dias,
+                           clinica_sel=clinica_sel, medico_sel=medico_sel)
+
+
+def resumen(c):
+    return f"{c['paciente']} · {c['medico']} · {c['clinica']} · {c['fecha']:%d/%m/%Y} {c['hora']:%H:%M}"
 
 
 def obtener_cita(cita_id):
@@ -410,7 +443,8 @@ def cita_cancelar(cita_id):
             if cur.rowcount == 0:
                 flash("Esta cita ya estaba cancelada o cerrada. No se hizo ningún cambio.", "aviso")
             else:
-                registrar_auditoria(cur, g.usuario["id"], "CANCELAR", "cita", cita_id, motivo)
+                registrar_auditoria(cur, g.usuario["id"], "CANCELAR", "cita", cita_id,
+                                    f"{resumen(c)} — Motivo: {motivo}")
                 flash("Cita cancelada. El horario quedó libre para otro paciente. "
                       "Si fue un error, presione «Deshacer cancelación».", "ok")
         return redirect(request.form.get("volver") or url_for("agenda", fecha=c["fecha"]))
@@ -434,7 +468,7 @@ def cita_reactivar(cita_id):
                 cur.execute("""UPDATE citas SET estado='AGENDADA', motivo_cancelacion=NULL,
                                actualizado_por=%s, actualizado_en=NOW() WHERE id=%s AND estado='CANCELADA'""",
                             (g.usuario["id"], cita_id))
-                registrar_auditoria(cur, g.usuario["id"], "REACTIVAR", "cita", cita_id)
+                registrar_auditoria(cur, g.usuario["id"], "REACTIVAR", "cita", cita_id, resumen(c))
             flash("Cancelación deshecha. La cita vuelve a estar agendada.", "ok")
         except psycopg2.errors.UniqueViolation:
             flash("No se puede deshacer: ese horario ya fue dado a otro paciente.", "error")
@@ -457,7 +491,7 @@ def cita_estado(cita_id):
             cur.execute("""UPDATE citas SET estado=%s, actualizado_por=%s, actualizado_en=NOW()
                            WHERE id=%s""", (nuevo, g.usuario["id"], cita_id))
             registrar_auditoria(cur, g.usuario["id"], "ESTADO", "cita", cita_id,
-                                f"{c['estado']} -> {nuevo}")
+                                f"{resumen(c)} — {ESTADOS[c['estado']]} → {ESTADOS[nuevo]}")
         flash(f"Cita marcada como «{ESTADOS[nuevo]}».", "ok")
     return redirect(url_for("agenda", fecha=c["fecha"]))
 
@@ -567,7 +601,8 @@ def admin_usuarios():
                     flash("Contraseña cambiada.", "ok")
         return redirect(url_for("admin_usuarios"))
     usuarios = consultar("""SELECT u.*, m.nombres AS medico FROM usuarios u
-                            LEFT JOIN medicos m ON m.id=u.medico_id ORDER BY u.activo DESC, u.nombre""")
+                            LEFT JOIN medicos m ON m.id=u.medico_id
+                            ORDER BY u.activo DESC, CASE u.rol WHEN 'ADMIN' THEN 0 WHEN 'RECEPCION' THEN 1 ELSE 2 END, u.nombre""")
     return render_template("admin_usuarios.html", usuarios=usuarios,
                            medicos=consultar("SELECT * FROM medicos WHERE activo ORDER BY nombres"))
 
@@ -575,7 +610,7 @@ def admin_usuarios():
 @app.route("/admin/auditoria")
 @login_requerido("ADMIN")
 def admin_auditoria():
-    registros = consultar("""SELECT a.*, u.usuario FROM auditoria a
+    registros = consultar("""SELECT a.*, u.usuario, u.nombre FROM auditoria a
                              LEFT JOIN usuarios u ON u.id=a.usuario_id
                              ORDER BY a.fecha DESC LIMIT 300""")
     return render_template("admin_auditoria.html", registros=registros)
