@@ -37,6 +37,9 @@
 - Acceso solo con usuario y contraseña (guardada con hash, nunca en texto plano).
 - Sesión expira a las 8 horas. Protección CSRF en todos los formularios.
 - Claves fuera del código: archivo `.env` excluido de Git.
+- Contraseñas de demostración (`usuario2026`): son sencillas a propósito para que el jurado
+  pruebe rápido y solo las crea `demo_datos.py`. En producción el administrador real se crea con
+  `init_db.py` y cada persona cambia su contraseña. Decisión consciente, no un descuido.
 - **Nada se borra**: las citas se cancelan; el historial (`auditoria`) registra usuario, acción y fecha.
 - **Borrado accidental**: `respaldo.ps1` genera copias diarias (programar en Windows). Restauración documentada.
 - Pendiente: HTTPS si se publica fuera de la red local; bloqueo tras varios intentos fallidos de login.

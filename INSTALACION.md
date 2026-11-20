@@ -37,8 +37,24 @@ El instalador usa `winget` (viene en Windows 10/11). Instala Python 3.12, Postgr
 
 ## C. Probar el sistema en 5 minutos (para el jurado)
 
-1. Entre con el usuario administrador creado al instalar.
-2. **Usuarios** → cree una recepcionista (ej. `rosa`, rol Recepción).
+1. Cargue los datos de demostración (pacientes inventados, citas de la semana y el personal del caso):
+
+   ```powershell
+   .\venv\Scripts\python.exe demo_datos.py
+   ```
+
+   | Persona | Rol | Usuario | Contraseña (solo demo) |
+   |---|---|---|---|
+   | Dra. Ana Paredes | Administración | `paredes` | `paredes2026` |
+   | Rosa Quishpe | Recepción | `rosa` | `rosa2026` |
+   | Marcela, Diana, Patricia, Verónica | Recepción | `marcela`, `diana`, `patricia`, `veronica` | usuario + `2026` |
+   | Dr. Luis Salazar | Médico | `salazar` | `salazar2026` |
+   | Dra. Carmen Vega | Médico | `vega` | `vega2026` |
+
+   Las contraseñas de demostración son sencillas a propósito. **En la clínica real**
+   cada persona debe cambiarla (Usuarios → Cambiar contraseña).
+
+2. Entre como `rosa` (recepción) y pruebe lo siguiente. Entre como `salazar` para ver que el médico solo ve su agenda.
 3. **Pacientes** → *Registrar paciente nuevo*. Pruebe datos malos:
    cédula `0000000000` o `1234567890`, teléfono `12345`, correo `juan@@gmail`,
    nacimiento en 2090 → el sistema explica qué corregir **sin borrar lo escrito**.

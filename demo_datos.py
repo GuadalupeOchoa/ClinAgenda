@@ -1,12 +1,14 @@
-"""Carga datos de DEMOSTRACIÓN (inventados) para probar o presentar el sistema.
+"""Carga datos de DEMOSTRACIÓN para probar o presentar el sistema.
 
-Crea usuarios de prueba (admin, recepción y médico) con contraseñas aleatorias
-que se guardan en demo_credenciales.txt (excluido de Git), algunos pacientes
-y citas para la semana. Se puede ejecutar varias veces.
+Crea el personal del caso (la Dra. Paredes, las 5 recepcionistas y médicos),
+algunos pacientes inventados y citas para la semana. Se puede ejecutar varias veces.
+
+Contraseñas de demostración: usuario + "2026" (ej. rosa -> rosa2026).
+Son SOLO para la demo: en la clínica real cada persona debe cambiarla.
+La lista completa queda en demo_credenciales.txt (excluido de Git).
 
 Uso:  python demo_datos.py
 """
-import secrets
 from datetime import date, timedelta
 
 from werkzeug.security import generate_password_hash
@@ -14,9 +16,21 @@ from werkzeug.security import generate_password_hash
 import validaciones as v
 from db import conexion
 
-USUARIOS = [("demo_admin", "Administrador Demo", "ADMIN", None),
-            ("demo_rosa", "Rosa (Recepción Demo)", "RECEPCION", None),
-            ("demo_salazar", "Dr. Salazar (Demo)", "MEDICO", 2)]
+SUFIJO_CLAVE_DEMO = "2026"
+
+# usuario, nombre, rol, medico_id
+USUARIOS = [
+    ("paredes",  "Dra. Ana Paredes",   "ADMIN",     None),
+    ("rosa",     "Rosa Quishpe",       "RECEPCION", None),
+    ("marcela",  "Marcela Toapanta",   "RECEPCION", None),
+    ("diana",    "Diana Lema",         "RECEPCION", None),
+    ("patricia", "Patricia Chávez",    "RECEPCION", None),
+    ("veronica", "Verónica Andrango",  "RECEPCION", None),
+    ("salazar",  "Dr. Luis Salazar",   "MEDICO",    2),
+    ("vega",     "Dra. Carmen Vega",   "MEDICO",    3),
+]
+# Usuarios de una versión anterior de la demo: se renombran para conservar su historial
+RENOMBRAR = {"demo_admin": "paredes", "demo_rosa": "rosa", "demo_salazar": "salazar"}
 
 PACIENTES = [  # tipo, documento, nombres, apellidos, nacimiento, teléfono, responsable, tel. resp.
     ("CEDULA", "1710034065", "María", "López Andrade", "1980-05-10", "0991234567", None, None),
@@ -40,16 +54,20 @@ def dia_habil(desde, n):
 
 
 def main():
-    lineas = ["Usuarios de DEMOSTRACIÓN de ClinAgenda (no usar en producción)", ""]
+    lineas = ["Usuarios de DEMOSTRACIÓN de ClinAgenda (cambiar las contraseñas antes de usarlo de verdad)", ""]
     with conexion() as con, con.cursor() as cur:
+        for viejo, nuevo in RENOMBRAR.items():
+            cur.execute("""UPDATE usuarios SET usuario=%s WHERE usuario=%s
+                           AND NOT EXISTS (SELECT 1 FROM usuarios WHERE usuario=%s)""", (nuevo, viejo, nuevo))
         for usuario, nombre, rol, medico_id in USUARIOS:
-            clave = secrets.token_urlsafe(9)
+            clave = usuario + SUFIJO_CLAVE_DEMO
             cur.execute("""INSERT INTO usuarios (usuario, nombre, clave_hash, rol, medico_id)
                            VALUES (%s,%s,%s,%s,%s)
-                           ON CONFLICT (usuario) DO UPDATE SET clave_hash=EXCLUDED.clave_hash, activo=TRUE""",
+                           ON CONFLICT (usuario) DO UPDATE SET nombre=EXCLUDED.nombre, rol=EXCLUDED.rol,
+                             medico_id=EXCLUDED.medico_id, clave_hash=EXCLUDED.clave_hash, activo=TRUE""",
                         (usuario, nombre, generate_password_hash(clave), rol, medico_id))
-            lineas.append(f"{rol:10} usuario: {usuario:14} contraseña: {clave}")
-        cur.execute("SELECT id FROM usuarios WHERE usuario='demo_rosa'")
+            lineas.append(f"{rol:10} {nombre:20} usuario: {usuario:10} contraseña: {clave}")
+        cur.execute("SELECT id FROM usuarios WHERE usuario='rosa'")
         rosa = cur.fetchone()["id"]
 
         ids = []
