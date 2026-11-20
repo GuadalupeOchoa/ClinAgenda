@@ -272,7 +272,13 @@ function documento(d) {
     // (ojo: zip.remove() borraría también el contenido de la carpeta; aquí se quita solo la entrada)
     Object.keys(zip.files).filter((n) => zip.files[n].dir).forEach((n) => { delete zip.files[n]; });
     const buf = await zip.generateAsync({ type: "nodebuffer", compression: "DEFLATE" });
-    fs.writeFileSync(path.join(SALIDA, d.docx), buf);
-    console.log(`✔ docs/word/${d.docx}  (${Math.round(buf.length / 1024)} KB)`);
+    try {
+      fs.writeFileSync(path.join(SALIDA, d.docx), buf);
+      console.log(`✔ docs/word/${d.docx}  (${Math.round(buf.length / 1024)} KB)`);
+    } catch (e) {
+      if (e.code !== "EBUSY" && e.code !== "EPERM") throw e;
+      console.log(`✖ docs/word/${d.docx} está abierto en otro programa: ciérrelo y vuelva a ejecutar.`);
+      process.exitCode = 1;
+    }
   }
 })();
