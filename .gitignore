@@ -4,6 +4,9 @@ demo_credenciales.txt
 venv/
 .venv/
 
+# Node (solo para generar los Word)
+herramientas/node_modules/
+
 # Python
 __pycache__/
 *.pyc
