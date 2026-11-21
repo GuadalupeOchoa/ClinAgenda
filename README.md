@@ -6,7 +6,7 @@ lo use personal sin experiencia con computadoras.
 
 Repositorio: https://github.com/GuadalupeOchoa/ClinAgenda
 
-********
+wwwwww
 ![Agenda del día](docs/img/02_agenda.jpg)
 
 ## Documentación
