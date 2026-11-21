@@ -4,7 +4,11 @@
  *
  * Uso (desde la carpeta herramientas):
  *     npm install        (solo la primera vez)
- *     node generar_word.js
+ *     node generar_word.js          (todos)
+ *     node generar_word.js 02 03    (solo esos; útil si alguien editó otro Word a mano)
+ *
+ * Ojo: 01_DECISIONES.docx fue editado a mano por el equipo; regenerarlo reemplaza esos cambios
+ * con el contenido de DECISIONES.md.
  */
 const fs = require("fs");
 const path = require("path");
@@ -266,7 +270,9 @@ function documento(d) {
 
 (async () => {
   fs.mkdirSync(SALIDA, { recursive: true });
-  for (const d of DOCUMENTOS) {
+  // Opcional: node generar_word.js 02 03  → regenera solo esos documentos (no toca los demás)
+  const elegidos = process.argv.slice(2);
+  for (const d of DOCUMENTOS.filter((x) => !elegidos.length || elegidos.some((e) => x.docx.startsWith(e)))) {
     // Se quitan las entradas de carpeta del ZIP: Word en la nube (OneDrive/SharePoint) a veces rechaza esos archivos
     const zip = await JSZip.loadAsync(await Packer.toBuffer(documento(d)));
     // (ojo: zip.remove() borraría también el contenido de la carpeta; aquí se quita solo la entrada)

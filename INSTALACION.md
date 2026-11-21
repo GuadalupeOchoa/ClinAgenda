@@ -18,6 +18,12 @@
 
 El instalador usa `winget` (viene en Windows 10/11). Instala Python 3.12, PostgreSQL 17 y Git.
 
+> **Importante al copiar a otro equipo:** no copie la carpeta `venv` ni el archivo `.env`.
+> `venv` guarda la ruta del Python de la computadora donde se creó y en otra máquina da el error
+> *"No Python at C:\Users\...\python.exe"*. Lo mejor es descargar el proyecto desde GitHub
+> (`git clone https://github.com/GuadalupeOchoa/ClinAgenda.git`), que no incluye esas carpetas.
+> Si ya la copió, `instalar.ps1` detecta que no sirve y la crea de nuevo.
+
 ## B. Instalación manual (si el script falla)
 
 1. Instale **Python 3.12** desde https://www.python.org/downloads/ — marque *"Add python.exe to PATH"*.

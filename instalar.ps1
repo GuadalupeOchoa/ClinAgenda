@@ -56,7 +56,19 @@ if (-not (Get-Command git -ErrorAction SilentlyContinue)) {
 
 # 4. Entorno virtual y dependencias
 Paso "Entorno virtual de Python y dependencias"
-if (-not (Test-Path ".\venv")) { python -m venv venv }
+# Si la carpeta venv se copio desde otra computadora, apunta al Python de esa maquina y no sirve:
+# se detecta probando si arranca, y en ese caso se borra y se crea de nuevo.
+$venvSirve = $false
+if (Test-Path ".\venv\Scripts\python.exe") {
+    try { & .\venv\Scripts\python.exe -c "import sys" 2>$null; $venvSirve = ($LASTEXITCODE -eq 0) } catch {}
+}
+if (-not $venvSirve) {
+    if (Test-Path ".\venv") {
+        Write-Host "La carpeta venv no funciona en este equipo (se copio de otro). Se crea de nuevo..." -ForegroundColor Yellow
+        Remove-Item -Recurse -Force ".\venv"
+    }
+    python -m venv venv
+}
 .\venv\Scripts\python.exe -m pip install --upgrade pip
 .\venv\Scripts\python.exe -m pip install -r requirements.txt
 
